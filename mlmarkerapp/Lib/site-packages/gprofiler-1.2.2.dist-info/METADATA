@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: gprofiler
+Version: 1.2.2
+Summary: Python port of the R wrapper for the g:Profiler functional enrichment tool.
+Home-page: https://github.com/vals/python-gprofiler
+Author: Valentine Svensson
+Author-email: valentine@nxn.se
+License: UNKNOWN
+Platform: UNKNOWN
+Requires-Dist: requests
+Requires-Dist: pandas
+
+UNKNOWN
+
+
