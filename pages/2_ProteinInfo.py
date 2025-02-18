@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 import mlmarker
 import seaborn as sns
 import matplotlib.pyplot as plt
-st.set_page_config(page_title="MLMarker", page_icon=":octopus:")
+st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png', size='large')
 protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
 st.session_state["protein_df"] = protein_df
@@ -66,7 +66,7 @@ if selected_tissue:
 
 
 
-    
+
 with st.sidebar:
     st.download_button("Download Tissue level prediction", st.session_state["prediction_summed"].to_csv().encode(), "prediction_summed.csv", "text/csv")
     st.download_button("Download Protein level prediction", st.session_state["prediction"].to_csv().encode(), "prediction.csv", "text/csv")

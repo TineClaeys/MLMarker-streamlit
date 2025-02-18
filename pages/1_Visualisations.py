@@ -14,7 +14,7 @@ scaler = MinMaxScaler()
 from plotly.subplots import make_subplots
 from gprofiler import GProfiler
 import plotly.graph_objects as go
-st.set_page_config(page_title="MLMarker", page_icon=":octopus:")
+st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png', size='large')
 protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
 st.session_state["protein_df"] = protein_df
