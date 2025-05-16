@@ -14,8 +14,10 @@ scaler = MinMaxScaler()
 from plotly.subplots import make_subplots
 from gprofiler import GProfiler
 import plotly.graph_objects as go
+
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png', size='large')
+
 protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
 st.session_state["protein_df"] = protein_df
 def visualise_custom_tissue_plot(df, tissue_name, top_n=10, show_others=False, threshold_others = 0.001):
@@ -203,7 +205,8 @@ def scatterplot_of_proteins(df, selected_tissues):
 
 
 st.title('Visualisations')
-
+st.write("This page allows you to visualise the results of your MLMarker prediction. You can view the tissue-specific protein contributions and explore the distribution of proteins across different tissues.")
+st.write("Proteins can have a positive and negative impact on the prediction meaning the presence of a specific protein can be informative against a tissue prediction and vice versa")
 if "prediction" in st.session_state and "prediction_summed" in st.session_state:
 
     bigfig = visualise_custom_plot(df=st.session_state["prediction"])
