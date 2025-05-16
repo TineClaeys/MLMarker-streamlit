@@ -28,4 +28,3 @@ bioservices
 shap==0.42.0
 gprofiler-official
 plotly
-re
