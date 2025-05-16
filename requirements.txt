@@ -27,5 +27,5 @@ numpy==1.26.4
 bioservices
 shap==0.42.0
 gprofiler-official
-plotly-express
+plotly
 re
