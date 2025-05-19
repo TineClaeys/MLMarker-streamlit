@@ -68,10 +68,11 @@ def transform_data(df, row_type):
 # --- Cache model ---
 @st.cache_resource
 def load_model(penalty, analysis_type):
+    pen = 0
     if penalty == "No":
-        pen = 0
+        pen == 0
     else:
-        pen = 1
+        pen == 1
     if analysis_type == "Quant":
         return mlmarker.MLMarker(dev=True, penalty_factor=pen, binary=False)
     else:
@@ -80,11 +81,15 @@ def load_model(penalty, analysis_type):
 # --- Cache file reading ---
 @st.cache_data
 def read_file(file):
-    if file.name.endswith(".csv"):
+    if isinstance(file, str):
+        name = file
+    else:
+        name = file.name
+    if name.endswith(".csv"):
         return pd.read_csv(file)
-    elif file.name.endswith(".tsv"):
+    elif name.endswith(".tsv"):
         return pd.read_csv(file, sep="\t")
-    elif file.name.endswith(".xlsx"):
+    elif name.endswith(".xlsx"):
         return pd.read_excel(file)
     else:
         st.error("Unsupported file format. Please upload CSV, TSV, or XLSX.")
@@ -134,13 +139,11 @@ if file is not None:
 # Simulate uploaded file when test button is pressed
 test_button = st.button("Test with example file", use_container_width=True)
 if test_button:
-    with open("testsample2.tsv", "rb") as f:
-        fake_upload = io.BytesIO(f.read())
-        fake_upload.name = "testsample2.tsv"
-        st.session_state.uploaded_file = fake_upload
+    file = "testsample2.tsv"
+    st.session_state.uploaded_file = file    
 
 uploaded_file = st.session_state.uploaded_file
-if uploaded_file:
+if uploaded_file is not None:
     df = read_file(uploaded_file)
     df = clean_input(df)
     st.session_state.df = df
@@ -152,13 +155,12 @@ if uploaded_file:
     sample_id = st.selectbox("Select sample to analyze", df.index.tolist(), key="sample_id", help="This application allows you to run one sample at a time which you should select here. If you want to analyze at higher throughputs, use the python package")
 
     # Choose analysis type and penalty
-    analysis_type = st.selectbox("Analysis Type", ["Quant", "Binary"], key="analysis_type", help="Quant will minmax normalize the quantification of your sample. When you have no quantitative information to your availability you can use binary classification, this will result in decreased performance and should be used with caution")
-    penalty = st.selectbox("Penalize absent features", ["No", "Yes"], key="penalty", help="Penalty factor set to 1 will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
+    analysis_type = st.selectbox("Analysis Type", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
+    penalty = st.selectbox("Penalize absent features", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
 
-    # Run
+
     if st.button("Run MLMarker", use_container_width=True):
         with st.spinner("Running MLMarker..."):
-            st.write(st.session_state.penalty, analysis_type)
             model = load_model(st.session_state.penalty, analysis_type)
             sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
             st.session_state.sel_sample= sample_id
