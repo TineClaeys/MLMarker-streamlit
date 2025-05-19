@@ -222,7 +222,7 @@ if st.button("Generate Tissuespecific ForcePlot"):
     st.plotly_chart(smallfig)
     st.session_state['smallfig'] = smallfig
 
-selected_tissues = st.multiselect('Select two tissues for a protein level visualisation', options=tissues_list)
+selected_tissues = st.multiselect('Select two tissues for a protein level visualisation', options=tissues_list, max_selections=2)
 if st.button('Generate distribution'):
     subset = st.session_state["prediction"][st.session_state["prediction"].index.isin(selected_tissues)]
     fig = scatterplot_of_proteins(subset, selected_tissues)

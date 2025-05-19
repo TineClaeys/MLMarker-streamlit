@@ -17,11 +17,22 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
-st.header("GO Enrichment Analysis of the protein set selected in the previous step")
-st.write("This section provides a GO enrichment analysis of the selected proteins. The analysis includes the following sources: GO:BP (Biological Process), GO:MF (Molecular Function), GO:CC (Cellular Component), HPA (Human Protein Atlas), and KEGG (Kyoto Encyclopedia of Genes and Genomes).")
-st.write("The results are filtered based on the selected p-value threshold. The top 20 GO terms for each source are visualized in a bar plot, with the -log10(p-value) on the x-axis and the GO terms on the y-axis. The plot is divided into subplots for each source, allowing for easy comparison of enrichment across different biological contexts.")
 
-st.write(f"**You selected {len(list(st.session_state['selected_proteins']))} proteins for GO enrichment analysis.**")
+st.header("GO Enrichment Analysis")
+
+st.write("""
+Analyze the functional context of your selected proteins using enrichment analysis from multiple sources:
+- **GO:BP** (Biological Process)
+- **GO:MF** (Molecular Function)
+- **GO:CC** (Cellular Component)
+- **HPA** (Human Protein Atlas)
+- **KEGG** (Pathways)
+
+Results are filtered by p-value and visualized as grouped bar plots (top 20 terms per source), with **-log10(p-value)** on the x-axis and GO terms on the y-axis.
+
+""")
+
+st.markdown(f"**Previous selection of {len(st.session_state['selected_proteins'])} proteins for analysis.**")
 
 
 def visualise_go_enrichment(df, title, proteins, max_bars=20):
@@ -33,12 +44,19 @@ def visualise_go_enrichment(df, title, proteins, max_bars=20):
 
     # Get the unique source types (e.g., 'GO:CC', 'GO:BP', 'HPA')
     sources = sorted(df_sorted['source'].unique())
+    source_labels = {
+        "GO:BP": "GO: Biological Process",
+        "GO:MF": "GO: Molecular Function",
+        "GO:CC": "GO: Cellular Component",
+        "HPA": "Human Protein Atlas",
+        "KEGG": "KEGG Pathways"
+    }
     max_log_p_value = df_sorted['-log10(p_value)'].max()
-
+    subplot_titles = [source_labels.get(src, src) for src in sources] 
     # Create subplots: 3 rows and 2 columns
     fig = make_subplots(
         rows=3, cols=2,  # 3 rows, 2 columns
-        subplot_titles=sources,  # Titles for each subplot (based on source)
+        subplot_titles=subplot_titles ,  # Titles for each subplot (based on source)
         shared_yaxes=False,
         shared_xaxes=False,
         vertical_spacing=0.18,

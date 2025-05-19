@@ -70,10 +70,10 @@ def transform_data(df, row_type):
 def load_model(penalty, analysis_type):
     pen = 0
     if penalty == "No":
-        pen == 0
+        pen = 0
     else:
-        pen == 1
-    if analysis_type == "Quant":
+        pen = 1
+    if analysis_type == "Quantified proteins":
         return mlmarker.MLMarker(dev=True, penalty_factor=pen, binary=False)
     else:
         return mlmarker.MLMarker(dev=True, penalty_factor=pen, binary=True)
@@ -120,9 +120,18 @@ eft_co, cent_co,last_co = st.columns(3)
 with cent_co:
     st.image('logo.png')
 st.write("MLMarker is a machine learning-based tool for predicting tissue-specific protein expression patterns. It uses a pre-trained model to analyze protein data and provide insights into the tissue distribution of proteins.")
-st.write("This app allows you to upload your protein data, select a sample for analysis, and choose the type of analysis (Quantitative or Binary). The results will show the predicted tissue probabilities based on the selected sample.")
-st.write("Upload your data in the format of columns as proteins and rows as samples. The first column should contain the sample IDs.")
-st.write("When working with a sparse sample or not solid tissue such as cell line, biofluid, etc. you can set the penalty factor to 1 which will reduce the impact of absent proteins on the predictions")
+
+with st.expander("ℹ️ What is MLMarker? Click to learn more!", expanded=False):
+    st.markdown("""
+    **MLMarker** is a machine learning-based tool for predicting tissue-specific protein expression patterns.
+
+    - 🧠 Uses a pre-trained model to analyze protein data.
+    - 📊 Supports **quantitative** and **binary** analysis.
+    - 🧬 Ideal for inferring tissue origin of proteomics samples.
+    - ⚠️ For sparse samples (e.g. fluids or cell lines), enable the penalty option to reduce bias from absent proteins.
+
+    **Upload data:** Rows = samples, Columns = proteins. First column = sample IDs.
+    """)
 
 # --- Load protein data ---
 protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
@@ -132,16 +141,21 @@ if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 
 # --- Upload & display ---
-file = st.file_uploader("Upload your file", type=["csv", "tsv", "xlsx"])
+col1, col2 = st.columns(2)
+with col1: 
+    st.markdown("#####")
+    st.write("""Upload your data in the format of columns as proteins and rows as samples. 
+    The first column should contain the sample IDs.""")
+with col2:
+    file = st.file_uploader("Upload your file", type=["csv", "tsv", "xlsx"],  help="Upload proteomics data with samples as rows and proteins as columns.")
+    # Simulate uploaded file when test button is pressed
+    test_button = st.button("Test with example file", use_container_width=True)
+    if test_button:
+        file = "testsample2.tsv"
+        st.session_state.uploaded_file = file    
 if file is not None:
     st.session_state.uploaded_file = file
-
-# Simulate uploaded file when test button is pressed
-test_button = st.button("Test with example file", use_container_width=True)
-if test_button:
-    file = "testsample2.tsv"
-    st.session_state.uploaded_file = file    
-
+st.markdown("##")
 uploaded_file = st.session_state.uploaded_file
 if uploaded_file is not None:
     df = read_file(uploaded_file)
@@ -155,9 +169,12 @@ if uploaded_file is not None:
     sample_id = st.selectbox("Select sample to analyze", df.index.tolist(), key="sample_id", help="This application allows you to run one sample at a time which you should select here. If you want to analyze at higher throughputs, use the python package")
 
     # Choose analysis type and penalty
-    analysis_type = st.selectbox("Analysis Type", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
-    penalty = st.selectbox("Penalize absent features", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
-
+    analysis_type = st.selectbox("Use quantificatied or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
+    penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
+    if penalty == "Yes":
+        st.warning("⚠️ Penalty is ON. Absent proteins will be down-weighted. Use for cell lines, fluids, organoids.")
+    else:
+        st.info("🧬 Penalty is OFF. Best used with solid tissue samples.")
 
     if st.button("Run MLMarker", use_container_width=True):
         with st.spinner("Running MLMarker..."):
@@ -169,9 +186,25 @@ if uploaded_file is not None:
 
             summed_pred = prediction_df.sum(axis=1)
             summed_pred[summed_pred < 0] = 0
+            #rename columns Tissue and Probability
             summed_pred /= summed_pred.sum()
-
-            st.subheader("Tissue Probability Prediction")
-            st.dataframe(summed_pred.sort_values(ascending=False), use_container_width=True)
             st.session_state.prediction_summed = summed_pred
             st.session_state.prediction = prediction_df
+            #make a barplot of prediction_summed
+
+            summed_pred= summed_pred.reset_index().rename(columns={"tissue": "Tissue", 0:"Probability"})
+
+            fig = px.bar(summed_pred.sort_values(by="Probability", ascending=True), 
+                            x="Probability", y="Tissue", title="Tissue Probability Prediction", 
+                            orientation="h", labels={'value': 'Probability', 'index': 'Tissue'})
+
+            fig.update_traces(textposition='auto', insidetextanchor='start')
+
+            bar_count = len(summed_pred)
+            fig.update_layout(
+                height=30 * bar_count,
+                margin=dict(l=120, r=40, t=60, b=60),
+                yaxis=dict(automargin=True)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
