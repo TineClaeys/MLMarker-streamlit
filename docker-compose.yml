@@ -1,0 +1,21 @@
+version: '3.7'
+services:
+  mlmarker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - __pycache__
+            - Dockerfile
+        - action: rebuild
+          path: Dockerfile
+    image: mlmarker
+    container_name: mlmarker
+    restart: on-failure
+    ports:
+      - 8502:8502
