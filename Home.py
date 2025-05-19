@@ -14,6 +14,9 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import mlmarker
 import io
+import streamlit.components.v1 as components
+import base64
+from custom_functions import mark_says
 
 
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
@@ -125,13 +128,15 @@ with st.expander("ℹ️ What is MLMarker? Click to learn more!", expanded=False
     st.markdown("""
     **MLMarker** is a machine learning-based tool for predicting tissue-specific protein expression patterns.
 
-    - 🧠 Uses a pre-trained model to analyze protein data.
-    - 📊 Supports **quantitative** and **binary** analysis.
-    - 🧬 Ideal for inferring tissue origin of proteomics samples.
+    - Uses a pre-trained model to analyze protein data.
+    - Supports **quantitative** and **binary** analysis.
+    - Ideal for inferring tissue origin of proteomics samples.
     - ⚠️ For sparse samples (e.g. fluids or cell lines), enable the penalty option to reduce bias from absent proteins.
 
     **Upload data:** Rows = samples, Columns = proteins. First column = sample IDs.
     """)
+with st.sidebar:
+    mark_says("Markverse\cropped_images\octopus.png", "Hi there! I'm Mark and I'll help you out! Let's predict what tissue is in your sample.")
 
 # --- Load protein data ---
 protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
@@ -151,6 +156,7 @@ with col2:
     # Simulate uploaded file when test button is pressed
     test_button = st.button("Test with example file", use_container_width=True)
     if test_button:
+        mark_says("Markverse\cropped_images\octopus.png", "Exciting, let me show you around!")
         file = "testsample2.tsv"
         st.session_state.uploaded_file = file    
 if file is not None:
@@ -172,39 +178,40 @@ if uploaded_file is not None:
     analysis_type = st.selectbox("Use quantificatied or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
     penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
     if penalty == "Yes":
-        st.warning("⚠️ Penalty is ON. Absent proteins will be down-weighted. Use for cell lines, fluids, organoids.")
+        st.warning("🐙 Mark says: Penalty is ON. I’ll down-weight missing proteins — perfect for cell lines, fluids, or organoids!")
     else:
-        st.info("🧬 Penalty is OFF. Best used with solid tissue samples.")
+        st.info("🐙 Mark says: Penalty is OFF. Great for solid tissue samples — I won’t tweak missing values.")
 
     if st.button("Run MLMarker", use_container_width=True):
-        with st.spinner("Running MLMarker..."):
-            model = load_model(st.session_state.penalty, analysis_type)
-            sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
-            st.session_state.sel_sample= sample_id
-            processed_sample = preprocess_sample(sample_df, analysis_type)
-            prediction_df = run_mlmarker(model, processed_sample)
+        mark_says("Markverse\cropped_images\Mark knitting.png", "Seeing some cool tissues there?")
 
-            summed_pred = prediction_df.sum(axis=1)
-            summed_pred[summed_pred < 0] = 0
-            #rename columns Tissue and Probability
-            summed_pred /= summed_pred.sum()
-            st.session_state.prediction_summed = summed_pred
-            st.session_state.prediction = prediction_df
-            #make a barplot of prediction_summed
+        model = load_model(st.session_state.penalty, analysis_type)
+        sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
+        st.session_state.sel_sample= sample_id
+        processed_sample = preprocess_sample(sample_df, analysis_type)
+        prediction_df = run_mlmarker(model, processed_sample)
 
-            summed_pred= summed_pred.reset_index().rename(columns={"tissue": "Tissue", 0:"Probability"})
+        summed_pred = prediction_df.sum(axis=1)
+        summed_pred[summed_pred < 0] = 0
+        #rename columns Tissue and Probability
+        summed_pred /= summed_pred.sum()
+        st.session_state.prediction_summed = summed_pred
+        st.session_state.prediction = prediction_df
+        #make a barplot of prediction_summed
 
-            fig = px.bar(summed_pred.sort_values(by="Probability", ascending=True), 
-                            x="Probability", y="Tissue", title="Tissue Probability Prediction", 
-                            orientation="h", labels={'value': 'Probability', 'index': 'Tissue'})
+        summed_pred= summed_pred.reset_index().rename(columns={"tissue": "Tissue", 0:"Probability"})
 
-            fig.update_traces(textposition='auto', insidetextanchor='start')
+        fig = px.bar(summed_pred.sort_values(by="Probability", ascending=True), 
+                        x="Probability", y="Tissue", title="Tissue Probability Prediction", 
+                        orientation="h", labels={'value': 'Probability', 'index': 'Tissue'})
 
-            bar_count = len(summed_pred)
-            fig.update_layout(
-                height=30 * bar_count,
-                margin=dict(l=120, r=40, t=60, b=60),
-                yaxis=dict(automargin=True)
-            )
+        fig.update_traces(textposition='auto', insidetextanchor='start')
 
-            st.plotly_chart(fig, use_container_width=True)
+        bar_count = len(summed_pred)
+        fig.update_layout(
+            height=30 * bar_count,
+            margin=dict(l=120, r=40, t=60, b=60),
+            yaxis=dict(automargin=True)
+        )
+
+        st.plotly_chart(fig, use_container_width=True)

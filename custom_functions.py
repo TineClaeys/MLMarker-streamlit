@@ -236,3 +236,29 @@ def prediction_df_2tissues_scatterplot(df, tissues=list):
     )
 
     fig.show()
+import io
+import streamlit.components.v1 as components
+import base64
+def mark_says(image_path, message):
+        with open(image_path, "rb") as img_file:
+            octo_base64 = base64.b64encode(img_file.read()).decode()
+        components.html(f"""
+        <div id="mark-box" style="
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #f0f2f6;
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            font-family: 'Source Sans Pro', sans-serif;
+        ">
+            <img src="data:image/png;base64,{octo_base64}" style="width:64px;height:60px;margin-right:10px;">
+            <div>{message}</div>
+             <span onclick="document.getElementById('mark-box').style.display='none';"
+                style="cursor:pointer; margin-left:10px; font-weight:bold; font-size:18px;">×</span>
+        </div>
+        """, height=110)

@@ -10,6 +10,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from mlmarker.explainability import get_hpa_info
 import numpy as np
+import io
+import streamlit.components.v1 as components
+import base64
+
+from custom_functions import mark_says
+
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png', size='large')
 
@@ -81,6 +87,7 @@ if "show_proteins" not in st.session_state:
 
 if st.button("Let's go!"):
     st.session_state.show_proteins = True
+    mark_says("Markverse\cropped_images\Bald Mark reading a book.png", "What is going on here?")
 
 if st.session_state.show_proteins:
     st.write(f"Protein level values for {selected_tissue} with {abundance_filter} abundance and {shap_filter} model contributions")

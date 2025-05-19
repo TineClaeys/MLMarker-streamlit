@@ -14,6 +14,11 @@ scaler = MinMaxScaler()
 from plotly.subplots import make_subplots
 from gprofiler import GProfiler
 import plotly.graph_objects as go
+import io
+import streamlit.components.v1 as components
+import base64
+from custom_functions import mark_says
+
 
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png', size='large')
@@ -213,20 +218,23 @@ if "prediction" in st.session_state and "prediction_summed" in st.session_state:
     st.plotly_chart(bigfig)
     st.session_state['bigfig'] = bigfig
 
-
+col1, col2 = st.columns(2)
 
 tissues_list = st.session_state["prediction_summed"].index.tolist()
+
 selected_tissue = st.selectbox("Select tissue for custom forceplot", options=tissues_list)
 if st.button("Generate Tissuespecific ForcePlot"):
     smallfig = visualise_custom_tissue_plot(st.session_state["prediction"], selected_tissue)
     st.plotly_chart(smallfig)
     st.session_state['smallfig'] = smallfig
 
-selected_tissues = st.multiselect('Select two tissues for a protein level visualisation', options=tissues_list, max_selections=2)
+selected_tissues = st.multiselect('Select two tissues for a protein level visualisation', options=tissues_list)
 if st.button('Generate distribution'):
+    mark_says("Markverse\cropped_images\Mark digging for gold.png", "Any interesting proteins popping up?")
     subset = st.session_state["prediction"][st.session_state["prediction"].index.isin(selected_tissues)]
     fig = scatterplot_of_proteins(subset, selected_tissues)
     st.plotly_chart(fig)
+    
 
 
 

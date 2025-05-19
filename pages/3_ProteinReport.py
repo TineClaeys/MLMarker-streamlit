@@ -14,6 +14,15 @@ from mlmarker import get_go_enrichment
 from plotly.subplots import make_subplots
 from gprofiler import GProfiler
 import plotly.graph_objects as go
+import io
+import streamlit.components.v1 as components
+import base64
+from custom_functions import mark_says
+
+
+
+
+
 
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
@@ -101,7 +110,8 @@ def visualise_go_enrichment(df, title, proteins, max_bars=20):
     return fig
 
 
-
+with st.sidebar:
+    mark_says("Markverse\cropped_images\Coding Mark.png", "Let's explore the functional context of your selected proteins!")
 
 from gprofiler import GProfiler
 import plotly.graph_objects as go
