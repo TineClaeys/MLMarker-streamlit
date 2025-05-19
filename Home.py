@@ -68,10 +68,14 @@ def transform_data(df, row_type):
 # --- Cache model ---
 @st.cache_resource
 def load_model(penalty, analysis_type):
-    if analysis_type == "Quant":
-        return mlmarker.MLMarker(dev=True, penalty_factor=penalty, binary=False)
+    if penalty == "No":
+        pen = 0
     else:
-        return mlmarker.MLMarker(dev=True, penalty_factor=penalty, binary=True)
+        pen = 1
+    if analysis_type == "Quant":
+        return mlmarker.MLMarker(dev=True, penalty_factor=pen, binary=False)
+    else:
+        return mlmarker.MLMarker(dev=True, penalty_factor=pen, binary=True)
 
 # --- Cache file reading ---
 @st.cache_data
@@ -149,12 +153,12 @@ if uploaded_file:
 
     # Choose analysis type and penalty
     analysis_type = st.selectbox("Analysis Type", ["Quant", "Binary"], key="analysis_type", help="Quant will minmax normalize the quantification of your sample. When you have no quantitative information to your availability you can use binary classification, this will result in decreased performance and should be used with caution")
-    penalty = st.selectbox("Penalty Factor", [0, 1], key="penalty", help="Penalty factor set to 1 will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
+    penalty = st.selectbox("Penalize absent features", ["No", "Yes"], key="penalty", help="Penalty factor set to 1 will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
 
     # Run
     if st.button("Run MLMarker", use_container_width=True):
         with st.spinner("Running MLMarker..."):
-            
+            st.write(st.session_state.penalty, analysis_type)
             model = load_model(st.session_state.penalty, analysis_type)
             sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
             st.session_state.sel_sample= sample_id
