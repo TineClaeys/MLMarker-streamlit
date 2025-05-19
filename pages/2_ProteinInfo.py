@@ -87,7 +87,7 @@ if "show_proteins" not in st.session_state:
 
 if st.button("Let's go!"):
     st.session_state.show_proteins = True
-    mark_says("Markverse\cropped_images\Bald Mark reading a book.png", "What is going on here?")
+    mark_says("Markverse/cropped_images/Bald Mark reading a book.png", "What is going on here?")
 
 if st.session_state.show_proteins:
     st.write(f"Protein level values for {selected_tissue} with {abundance_filter} abundance and {shap_filter} model contributions")

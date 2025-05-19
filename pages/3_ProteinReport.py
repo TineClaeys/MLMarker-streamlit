@@ -111,7 +111,7 @@ def visualise_go_enrichment(df, title, proteins, max_bars=20):
 
 
 with st.sidebar:
-    mark_says("Markverse\cropped_images\Coding Mark.png", "Let's explore the functional context of your selected proteins!")
+    mark_says("Markverse/cropped_images/Coding Mark.png", "Let's explore the functional context of your selected proteins!")
 
 from gprofiler import GProfiler
 import plotly.graph_objects as go
