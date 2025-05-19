@@ -136,7 +136,7 @@ with st.expander("ℹ️ What is MLMarker? Click to learn more!", expanded=False
     **Upload data:** Rows = samples, Columns = proteins. First column = sample IDs.
     """)
 with st.sidebar:
-    mark_says("Markverse\cropped_images\octopus.png", "Hi there! I'm Mark and I'll help you out! Let's predict what tissue is in your sample.")
+    mark_says("Markverse/cropped_images/octopus.png", "Hi there! I'm Mark and I'll help you out! Let's predict what tissue is in your sample.")
 
 # --- Load protein data ---
 protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
@@ -156,7 +156,7 @@ with col2:
     # Simulate uploaded file when test button is pressed
     test_button = st.button("Test with example file", use_container_width=True)
     if test_button:
-        mark_says("Markverse\cropped_images\octopus.png", "Exciting, let me show you around!")
+        mark_says("Markverse/cropped_images/octopus.png", "Exciting, let me show you around!")
         file = "testsample2.tsv"
         st.session_state.uploaded_file = file    
 if file is not None:
@@ -183,7 +183,7 @@ if uploaded_file is not None:
         st.info("🐙 Mark says: Penalty is OFF. Great for solid tissue samples — I won’t tweak missing values.")
 
     if st.button("Run MLMarker", use_container_width=True):
-        mark_says("Markverse\cropped_images\Mark knitting.png", "Seeing some cool tissues there?")
+        mark_says("Markverse/cropped_images/Mark knitting.png", "Seeing some cool tissues there?")
 
         model = load_model(st.session_state.penalty, analysis_type)
         sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
