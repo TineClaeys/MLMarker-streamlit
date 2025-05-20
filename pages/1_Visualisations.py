@@ -228,7 +228,7 @@ if st.button("Generate Tissuespecific ForcePlot"):
     st.plotly_chart(smallfig)
     st.session_state['smallfig'] = smallfig
 
-selected_tissues = st.multiselect('Select two tissues for a protein level visualisation', options=tissues_list)
+selected_tissues = st.multiselect('Select two tissues for a protein level visualisation', options=tissues_list, max_selections=2)
 if st.button('Generate distribution'):
     mark_says("Markverse/cropped_images/Mark digging for gold.png", "Any interesting proteins popping up?")
     subset = st.session_state["prediction"][st.session_state["prediction"].index.isin(selected_tissues)]
