@@ -41,11 +41,11 @@ Results are filtered by p-value and visualized as grouped bar plots (top 20 term
 
 """)
 
-if st.session_state['selected_proteins']:
-    st.markdown(f"**Previous selection of {len(st.session_state['selected_proteins'])} proteins for analysis.**")
-else:
-    st.markdown("**No proteins selected yet. Please select proteins from the previous step to perform GO enrichment analysis.**")
-
+#check if proteins were selected in the previous step
+if 'selected_proteins' not in st.session_state:
+    st.error("No proteins selected yet. Please select proteins from the previous step to perform GO enrichment analysis.")
+    st.session_state['selected_proteins'] = []
+    
 
 def visualise_go_enrichment(df, title, proteins, max_bars=20):
     # Add a -log10(p-value) column for better visualization of significance
