@@ -168,7 +168,7 @@ if uploaded_file is not None:
     df = clean_input(df)
     st.session_state.df = df
     st.write("Uploaded data preview:")
-    st.dataframe(df.head(5), use_container_width=True)
+    st.dataframe(df, use_container_width=True)
     if "sample_id" not in st.session_state:
         st.session_state.sample_id = df.index[0]
     # Select sample
