@@ -117,18 +117,19 @@ def preprocess_sample(sample_df, method):
 def run_mlmarker(model, sample_df):
     model.load_sample(sample_df)
     return model.explainability.adjusted_absent_shap_values_df(n_preds=50)
-
+all_possible_tissues = sorted(['Nasal Polyps', 'Duodenum', 'Small intestine', 'Parotid gland', 'Colon', 'Liver', 'Ovary', 'Testis', 'B-cells', 'Prostate', 'Esophagus', 'Skeletal muscle', 'Stomach', 'Adrenal gland', 'Appendix', 'Salivary gland', 'Urinary bladder', 'Smooth muscle', 'Oviduct', 'Lung', 'Pituitary gland', 'Brain', 'Placenta', 'Tonsil', 'Endometrium', 'Rectum', 'Lymph node', 'Thyroid', 'Bone marrow', 'Kidney', 'Adipose tissue', 'Heart', 'Monocytes', 'Spleen'])
 # -- documentation --
 eft_co, cent_co,last_co = st.columns(3)
 with cent_co:
     st.image('logo.png')
-st.write("MLMarker is a machine learning-based tool for predicting tissue-specific protein expression patterns. It uses a pre-trained model to analyze protein data and provide insights into the tissue distribution of proteins.")
+st.write("MLMarker is a machine learning-based tool for predicting tissue-specific protein expression patterns. It uses a pre-trained model to analyze protein data and provide insights into the tissue distribution of proteins based on 34 possible tissues.")
 
 with st.expander("ℹ️ What is MLMarker? Click to learn more!", expanded=False):
-    st.markdown("""
+    st.markdown(f"""
     **MLMarker** is a machine learning-based tool for predicting tissue-specific protein expression patterns.
 
     - Uses a pre-trained model to analyze protein data.
+    - The possible tissue classes are {all_possible_tissues}
     - Supports **quantitative** and **binary** analysis.
     - Ideal for inferring tissue origin of proteomics samples.
     - ⚠️ For sparse samples (e.g. fluids or cell lines), enable the penalty option to reduce bias from absent proteins.
@@ -175,7 +176,7 @@ if uploaded_file is not None:
     sample_id = st.selectbox("Select sample to analyze", df.index.tolist(), key="sample_id", help="This application allows you to run one sample at a time which you should select here. If you want to analyze at higher throughputs, use the python package")
 
     # Choose analysis type and penalty
-    analysis_type = st.selectbox("Use quantificatied or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
+    analysis_type = st.selectbox("Use quantified or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
     penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
     if penalty == "Yes":
         st.warning("🐙 Mark says: Penalty is ON. I’ll down-weight missing proteins — perfect for cell lines, fluids, or organoids!")
