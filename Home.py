@@ -138,7 +138,7 @@ with st.expander("ℹ️ What is MLMarker? Click to learn more!", expanded=False
     - Columns = proteins
     - First column = sample IDs
 
-    **Possible tissue classes (n=34): **
+    **Possible tissue classes (n=34):**
     """)
     st.markdown(", ".join(all_possible_tissues))
 with st.sidebar:
