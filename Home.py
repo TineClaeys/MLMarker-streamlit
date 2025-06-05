@@ -129,13 +129,18 @@ with st.expander("ℹ️ What is MLMarker? Click to learn more!", expanded=False
     **MLMarker** is a machine learning-based tool for predicting tissue-specific protein expression patterns.
 
     - Uses a pre-trained model to analyze protein data.
-    - The possible tissue classes are {all_possible_tissues}
     - Supports **quantitative** and **binary** analysis.
     - Ideal for inferring tissue origin of proteomics samples.
     - ⚠️ For sparse samples (e.g. fluids or cell lines), enable the penalty option to reduce bias from absent proteins.
 
-    **Upload data:** Rows = samples, Columns = proteins. First column = sample IDs.
+    **Input format:** 
+    - Rows = samples
+    - Columns = proteins
+    - First column = sample IDs
+
+    **Possible tissue classes (n=34): **
     """)
+    st.markdown(", ".join(all_possible_tissues))
 with st.sidebar:
     mark_says("Markverse/cropped_images/octopus.png", "Hi there! I'm Mark and I'll help you out! Let's predict what tissue is in your sample.")
 
