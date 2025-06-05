@@ -199,17 +199,17 @@ if uploaded_file is not None:
 
         summed_pred = prediction_df.sum(axis=1)
         summed_pred[summed_pred < 0] = 0
-        #rename columns Tissue and Probability
+        #rename columns Tissue and Similarity
         summed_pred /= summed_pred.sum()
         st.session_state.prediction_summed = summed_pred
         st.session_state.prediction = prediction_df
         #make a barplot of prediction_summed
 
-        summed_pred= summed_pred.reset_index().rename(columns={"tissue": "Tissue", 0:"Probability"})
+        summed_pred= summed_pred.reset_index().rename(columns={"tissue": "Tissue", 0:"Similarity"})
 
-        fig = px.bar(summed_pred.sort_values(by="Probability", ascending=True), 
-                        x="Probability", y="Tissue", title="Tissue Probability Prediction", 
-                        orientation="h", labels={'value': 'Probability', 'index': 'Tissue'})
+        fig = px.bar(summed_pred.sort_values(by="Similarity", ascending=True), 
+                        x="Similarity", y="Tissue", title="Tissue Similarity Prediction", 
+                        orientation="h", labels={'value': 'Similarity', 'index': 'Tissue'})
 
         fig.update_traces(textposition='auto', insidetextanchor='start')
 
