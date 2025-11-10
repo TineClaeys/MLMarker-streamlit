@@ -1,3 +1,18 @@
+# Fix for pkg_resources issue in deployment
+import sys
+import os
+
+# Try to fix pkg_resources import issue
+try:
+    import pkg_resources
+except ImportError:
+    try:
+        import importlib.metadata as pkg_resources
+        sys.modules['pkg_resources'] = pkg_resources
+    except ImportError:
+        # Install setuptools if missing
+        os.system('pip install setuptools')
+        import pkg_resources
 
 import streamlit as st
 import pandas as pd
@@ -117,6 +132,8 @@ def preprocess_sample(sample_df, method):
 def run_mlmarker(model, sample_df):
     model.load_sample(sample_df)
     return model.explainability.adjusted_absent_shap_values_df(n_preds=50)
+
+    
 all_possible_tissues = sorted(['Nasal Polyps', 'Duodenum', 'Small intestine', 'Parotid gland', 'Colon', 'Liver', 'Ovary', 'Testis', 'B-cells', 'Prostate', 'Esophagus', 'Skeletal muscle', 'Stomach', 'Adrenal gland', 'Appendix', 'Salivary gland', 'Urinary bladder', 'Smooth muscle', 'Oviduct', 'Lung', 'Pituitary gland', 'Brain', 'Placenta', 'Tonsil', 'Endometrium', 'Rectum', 'Lymph node', 'Thyroid', 'Bone marrow', 'Kidney', 'Adipose tissue', 'Heart', 'Monocytes', 'Spleen'])
 # -- documentation --
 eft_co, cent_co,last_co = st.columns(3)
