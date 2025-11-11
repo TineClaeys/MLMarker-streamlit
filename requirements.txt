@@ -5,9 +5,9 @@ jsonschema-specifications==2023.12.1
 Markdown==3.7
 markdown-it-py
 MarkupSafe
-matplotlib==3.7.2
+matplotlib
 matplotlib-inline
-matplotlib-venn==1.1.1
+matplotlib-venn
 mlmarker==0.1.5
 pandas
 python-dateutil
@@ -18,7 +18,7 @@ PyYAML
 scikit-image==0.24.0
 scikit-learn==1.5.1
 scipy
-seaborn==0.13.2
+seaborn
 sklearn==0.0
 streamlit
 url-normalize==1.4.3
