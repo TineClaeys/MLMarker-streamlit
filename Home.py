@@ -2,7 +2,6 @@
 import sys
 import os
 
-sys.modules["bioservices"] = None
 import streamlit as st
 import pandas as pd
 import numpy as np
