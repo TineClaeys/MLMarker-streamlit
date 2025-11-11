@@ -2,18 +2,6 @@
 import sys
 import os
 
-# Try to fix pkg_resources import issue
-try:
-    import pkg_resources
-except ImportError:
-    try:
-        import importlib.metadata as pkg_resources
-        sys.modules['pkg_resources'] = pkg_resources
-    except ImportError:
-        # Install setuptools if missing
-        os.system('pip install setuptools')
-        import pkg_resources
-
 import streamlit as st
 import pandas as pd
 import numpy as np
