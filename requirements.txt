@@ -24,10 +24,12 @@ streamlit
 url-normalize==1.4.3
 urllib3
 numpy==1.26.4
-bioservices==1.11.2
+bioservices==1.10.7
+# Use suds-community instead of suds-jurko
+suds-community
 shap==0.42.0
 gprofiler-official
 plotly
 openpyxl
-setuptools==58.0.4
+setuptools==67.0.0
 wheel
