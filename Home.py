@@ -1,7 +1,13 @@
 # Fix for pkg_resources issue in deployment
 import sys
 import os
-
+try:
+    import pkgutil
+    if not hasattr(pkgutil, 'ImpImporter'):
+        # Add missing ImpImporter for Python 3.12
+        pkgutil.ImpImporter = type('ImpImporter', (), {})
+except:
+    pass
 import streamlit as st
 import pandas as pd
 import numpy as np
