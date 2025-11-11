@@ -29,6 +29,6 @@ shap==0.42.0
 gprofiler-official
 plotly
 openpyxl
-setuptools>=65.0.0
-pkg-resources==0.0.0
+setuptools
+pkg-resources
 wheel
