@@ -24,10 +24,11 @@ streamlit
 url-normalize==1.4.3
 urllib3
 numpy==1.26.4
+setuptools==75.1.0
 bioservices==1.12.1
 shap==0.42.0
 gprofiler-official
 plotly
 openpyxl
-setuptools==75.1.0
+
 wheel==0.44.0
