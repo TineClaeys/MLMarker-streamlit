@@ -1,3 +1,4 @@
+altair<5
 joblib==1.4.2
 json5
 jsonschema
@@ -20,6 +21,7 @@ scikit-learn==1.5.1
 scipy
 seaborn
 sklearn==0.0
+streamlit
 url-normalize==1.4.3
 urllib3
 numpy==1.26.4
@@ -29,5 +31,4 @@ shap==0.42.0
 gprofiler-official
 plotly
 openpyxl
-altair<5
 wheel==0.44.0
