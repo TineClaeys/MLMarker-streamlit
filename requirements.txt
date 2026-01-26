@@ -30,5 +30,5 @@ shap==0.42.0
 gprofiler-official
 plotly
 openpyxl
-
+altair<5
 wheel==0.44.0
