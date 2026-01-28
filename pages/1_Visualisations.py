@@ -212,11 +212,15 @@ def scatterplot_of_proteins(df, selected_tissues):
 st.title('Visualisations')
 st.write("This page allows you to visualise the results of your MLMarker prediction. You can view the tissue-specific protein contributions and explore the distribution of proteins across different tissues.")
 st.write("Proteins can have a positive and negative impact on the prediction meaning the presence of a specific protein can be informative against a tissue prediction and vice versa")
-if "prediction" in st.session_state and "prediction_summed" in st.session_state:
 
-    bigfig = visualise_custom_plot(df=st.session_state["prediction"])
-    st.plotly_chart(bigfig)
-    st.session_state['bigfig'] = bigfig
+# Check if data has been uploaded and prediction has been run
+if "prediction" not in st.session_state or "prediction_summed" not in st.session_state:
+    st.warning("⚠️ No prediction data found. Please go to the **Home** page, upload your data, and run MLMarker first.")
+    st.stop()
+
+bigfig = visualise_custom_plot(df=st.session_state["prediction"])
+st.plotly_chart(bigfig)
+st.session_state['bigfig'] = bigfig
 
 col1, col2 = st.columns(2)
 

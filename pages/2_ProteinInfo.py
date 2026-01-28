@@ -33,6 +33,11 @@ Explore key proteins driving the prediction for a selected tissue.
 - Use selected proteins for GO enrichment in the next step.
 """)
 
+# Check if data has been uploaded and prediction has been run
+if "df" not in st.session_state or "prediction_summed" not in st.session_state or "sel_sample" not in st.session_state:
+    st.warning("⚠️ No prediction data found. Please go to the **Home** page, upload your data, and run MLMarker first.")
+    st.stop()
+
 df = st.session_state["df"]
 sel_sample = st.session_state['sel_sample']
 
