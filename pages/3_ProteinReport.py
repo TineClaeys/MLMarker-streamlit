@@ -24,6 +24,7 @@ from custom_functions import mark_says
 
 
 
+
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
 
@@ -125,9 +126,9 @@ gp = GProfiler(return_dataframe=True)
 # Dictionary to store GO terms and p-values for each tissue
 go_dict = {}
 
-
-# Perform GO enrichment
-results = gp.profile(organism='hsapiens', query=list(st.session_state['selected_proteins']), sources=['GO:BP', 'GO:MF', 'GO:CC', 'HPA', 'KEGG'])
+# Perform GO enrichment with spinner
+with st.spinner("Running GO enrichment analysis... This may take a moment."):
+    results = gp.profile(organism='hsapiens', query=list(st.session_state['selected_proteins']), sources=['GO:BP', 'GO:MF', 'GO:CC', 'HPA', 'KEGG'])
 
 #p-value filter selection
 p_value_filter = st.selectbox("Select p-value filter", options=["0.001", "0.01", "0.05"])
@@ -135,7 +136,7 @@ results = results[results['p_value'] <= float(p_value_filter)]
 
 st.write(results)
 
-bigfig = visualise_go_enrichment(results, title="GO Enrichment", proteins=len(list(st.session_state['selected_proteins'])))
-# Store results in the dictionary: {tissue: {GO_term: p-value}}
+with st.spinner("Generating visualization..."):
+    bigfig = visualise_go_enrichment(results, title="GO Enrichment", proteins=len(list(st.session_state['selected_proteins'])))
 
 st.plotly_chart(bigfig)
