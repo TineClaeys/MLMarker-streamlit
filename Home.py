@@ -122,7 +122,7 @@ def preprocess_sample(sample_df, method):
 def run_mlmarker(model, sample_df):
     model.load_sample(sample_df)
 
-    return model.explainability.get_shap_values(n_preds=50)
+    return model.explainability.get_shap_values(n_preds=34)
 
     
 all_possible_tissues = sorted(['Nasal Polyps', 'Duodenum', 'Small intestine', 'Parotid gland', 'Colon', 'Liver', 'Ovary', 'Testis', 'B-cells', 'Prostate', 'Esophagus', 'Skeletal muscle', 'Stomach', 'Adrenal gland', 'Appendix', 'Salivary gland', 'Urinary bladder', 'Smooth muscle', 'Oviduct', 'Lung', 'Pituitary gland', 'Brain', 'Placenta', 'Tonsil', 'Endometrium', 'Rectum', 'Lymph node', 'Thyroid', 'Bone marrow', 'Kidney', 'Adipose tissue', 'Heart', 'Monocytes', 'Spleen'])
