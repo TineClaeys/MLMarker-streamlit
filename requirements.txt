@@ -1,10 +1,8 @@
-# Pin versions that work locally
+# Pin scikit-learn to match the trained model in mlmarker
+scikit-learn==1.5.1
+numpy==1.26.4
 shap==0.42.0
-scikit-learn==1.6.1
-numpy==1.23.5
 
-mlmarker==0.1.6
-pandas==2.2.3
 # Core ML package
 mlmarker
 
