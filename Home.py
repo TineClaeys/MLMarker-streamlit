@@ -111,12 +111,12 @@ def clean_input(df):
 def preprocess_sample(sample_df, method):
     # Fill NaN values with 0 before processing for MLMarker
     sample_df = sample_df.fillna(0)
-    if method == "Quant":
+    if method == "Quantified proteins":
         scaler = MinMaxScaler()
         return pd.DataFrame(scaler.fit_transform(sample_df.T).T,
                             index=sample_df.index, columns=sample_df.columns)
     else:
-        return sample_df.applymap(lambda x: 1 if x > 0 else 0)
+        return sample_df.map(lambda x: 1 if x > 0 else 0)
 
 # --- Run MLMarker prediction ---
 def run_mlmarker(model, sample_df):
@@ -167,7 +167,7 @@ with col1:
 with col2:
     file = st.file_uploader("Upload your file", type=["csv", "tsv", "xlsx"],  help="Upload proteomics data with samples as rows and proteins as columns.")
     # Simulate uploaded file when test button is pressed
-    test_button = st.button("Test with example file", use_container_width=True)
+    test_button = st.button("Test with example file", width='stretch')
     if test_button:
         mark_says("Markverse/cropped_images/octopus.png", "Exciting, let me show you around!")
         file = "testsample.tsv"
@@ -181,7 +181,7 @@ if uploaded_file is not None:
     df = clean_input(df)
     st.session_state.df = df
     st.write("Uploaded data preview:")
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width='stretch')
     if "sample_id" not in st.session_state:
         st.session_state.sample_id = df.index[0]
     # Select sample
@@ -195,7 +195,7 @@ if uploaded_file is not None:
     else:
         st.info("🐙 Mark says: Penalty is OFF. Great for solid tissue samples — I won’t tweak missing values.")
 
-    if st.button("Run MLMarker", use_container_width=True):
+    if st.button("Run MLMarker", width='stretch'):
         mark_says("Markverse/cropped_images/Mark knitting.png", "Seeing some cool tissues there?")
 
         model = load_model(st.session_state.penalty, analysis_type)
@@ -227,4 +227,4 @@ if uploaded_file is not None:
             yaxis=dict(automargin=True)
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
