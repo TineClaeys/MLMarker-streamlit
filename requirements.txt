@@ -4,7 +4,7 @@ numpy==1.26.4
 shap==0.42.0
 
 # Core ML package
-mlmarker
+mlmarker==0.1.6
 
 # Web app
 streamlit>=1.35
