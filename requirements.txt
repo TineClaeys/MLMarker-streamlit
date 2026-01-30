@@ -9,7 +9,7 @@ MarkupSafe
 matplotlib
 matplotlib-inline
 matplotlib-venn
-mlmarker==0.1.5
+mlmarker==0.1.6
 pandas
 python-dateutil
 python-json-logger
