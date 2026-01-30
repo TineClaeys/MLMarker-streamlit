@@ -28,10 +28,10 @@ from custom_functions import mark_says
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
 
-st.header("GO Enrichment Analysis")
+st.header("Over-Representation Analysis")
 
 st.write("""
-Analyze the functional context of your selected proteins using enrichment analysis from multiple sources:
+Analyze the functional context of your selected proteins using over-representation analysis (ORA) from multiple sources:
 - **GO:BP** (Biological Process)
 - **GO:MF** (Molecular Function)
 - **GO:CC** (Cellular Component)
@@ -44,7 +44,7 @@ Results are filtered by p-value and visualized as grouped bar plots (top 20 term
 
 #check if proteins were selected in the previous step
 if 'selected_proteins' not in st.session_state:
-    st.error("No proteins selected yet. Please select proteins from the previous step to perform GO enrichment analysis.")
+    st.error("No proteins selected yet. Please select proteins from the previous step to perform over-representation analysis.")
     #make sure the rest of the page doesn't load
     st.stop()
 
@@ -102,7 +102,7 @@ def visualise_go_enrichment(df, title, proteins, max_bars=20):
     # Update layout
     fig.update_layout(
         template="plotly_white",
-        title=f"{title} GO Enrichment Term Rank (Max 20 bars) for {proteins} proteins",
+        title=f"{title} Over-Representation Analysis Term Rank (Max 20 bars) for {proteins} proteins",
         title_x=0.5,
         xaxis_title="-log10(p-value)",
         yaxis_title="GO Terms",
@@ -126,8 +126,8 @@ gp = GProfiler(return_dataframe=True)
 # Dictionary to store GO terms and p-values for each tissue
 go_dict = {}
 
-# Perform GO enrichment with spinner
-with st.spinner("Running GO enrichment analysis... This may take a moment."):
+# Perform over-representation analysis with spinner
+with st.spinner("Running over-representation analysis... This may take a moment."):
     results = gp.profile(organism='hsapiens', query=list(st.session_state['selected_proteins']), sources=['GO:BP', 'GO:MF', 'GO:CC', 'HPA', 'KEGG'])
 
 #p-value filter selection
@@ -137,6 +137,6 @@ results = results[results['p_value'] <= float(p_value_filter)]
 st.write(results)
 
 with st.spinner("Generating visualization..."):
-    bigfig = visualise_go_enrichment(results, title="GO Enrichment", proteins=len(list(st.session_state['selected_proteins'])))
+    bigfig = visualise_go_enrichment(results, title="ORA", proteins=len(list(st.session_state['selected_proteins'])))
 
 st.plotly_chart(bigfig)

@@ -30,7 +30,7 @@ Explore key proteins driving the prediction for a selected tissue.
 - Results include: Protein ID, entry name, MLMarker value, sample abundance, UniProt description, and UniProt tissue specificity.
 - Proteins are sorted by SHAP value (most impactful first).
 - Click a protein ID to view its UniProt page.
-- Use selected proteins for GO enrichment in the next step.
+- Use selected proteins for over-representation analysis in the next step.
 """)
 
 # Check if data has been uploaded and prediction has been run

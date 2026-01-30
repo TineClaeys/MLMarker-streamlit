@@ -41,7 +41,7 @@ def get_go_enrichment(protein_list):
     go_dict = {}
 
 
-    # Perform GO enrichment
+    # Perform over-representation analysis
     results = gp.profile(organism='hsapiens', query=protein_list, sources=['GO:BP', 'GO:MF', 'GO:CC', 'HPA'], combined=True)
     results = results[results['p_value']< 0.05]
     # Store results in the dictionary: {tissue: {GO_term: p-value}}

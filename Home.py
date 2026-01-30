@@ -109,6 +109,8 @@ def clean_input(df):
 
 # --- Preprocess one sample only ---
 def preprocess_sample(sample_df, method):
+    # Fill NaN values with 0 before processing for MLMarker
+    sample_df = sample_df.fillna(0)
     if method == "Quant":
         scaler = MinMaxScaler()
         return pd.DataFrame(scaler.fit_transform(sample_df.T).T,
