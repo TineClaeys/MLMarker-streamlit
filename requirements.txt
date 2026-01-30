@@ -1,34 +1,13 @@
-altair<5
-joblib==1.4.2
-json5
-jsonschema
-jsonschema-specifications==2023.12.1
-Markdown==3.7
-markdown-it-py
-MarkupSafe
-matplotlib
-matplotlib-inline
-matplotlib-venn
-mlmarker==0.1.6
-pandas
-python-dateutil
-python-json-logger
-pytz
-pyviz_comms==3.0.3
-PyYAML
-scikit-image==0.24.0
-scikit-learn==1.5.1
-scipy
-seaborn
-sklearn==0.0
+# Core ML package (brings its own numpy, scikit-learn, shap, pandas, etc.)
+mlmarker
+
+# Web app
 streamlit>=1.35
-url-normalize==1.4.3
-urllib3
-numpy == 1.23.5
-setuptools==75.1.0
-bioservices==1.12.1
-shap==0.42.0
-gprofiler-official
 plotly
+
+# Additional functionality not in mlmarker
+gprofiler-official
+bioservices
 openpyxl
-wheel==0.44.0
+matplotlib-venn
+altair<5
