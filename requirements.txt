@@ -1,7 +1,10 @@
 # Pin versions that work locally
 shap==0.42.0
 scikit-learn==1.6.1
+numpy==1.23.5
 
+mlmarker==0.1.6
+pandas==2.2.3
 # Core ML package
 mlmarker
 
