@@ -11,3 +11,7 @@ bioservices
 openpyxl
 matplotlib-venn
 altair<5
+
+plotly
+openpyxl
+wheel==0.44.0
