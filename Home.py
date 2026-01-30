@@ -80,9 +80,9 @@ def load_model(penalty, analysis_type):
     else:
         pen = 1
     if analysis_type == "Quantified proteins":
-        return mlmarker.MLMarker(dev=True, penalty_factor=pen, binary=False)
+        return mlmarker.MLMarker(penalty_factor=pen, binary=False)
     else:
-        return mlmarker.MLMarker(dev=True, penalty_factor=pen, binary=True)
+        return mlmarker.MLMarker(penalty_factor=pen, binary=True)
 
 # --- Cache file reading ---
 @st.cache_data
@@ -167,7 +167,7 @@ with col1:
 with col2:
     file = st.file_uploader("Upload your file", type=["csv", "tsv", "xlsx"],  help="Upload proteomics data with samples as rows and proteins as columns.")
     # Simulate uploaded file when test button is pressed
-    test_button = st.button("Test with example file", width='stretch')
+    test_button = st.button("Test with example file")
     if test_button:
         mark_says("Markverse/cropped_images/octopus.png", "Exciting, let me show you around!")
         file = "testsample.tsv"
@@ -181,7 +181,7 @@ if uploaded_file is not None:
     df = clean_input(df)
     st.session_state.df = df
     st.write("Uploaded data preview:")
-    st.dataframe(df, width='stretch')
+    st.dataframe(df)
     if "sample_id" not in st.session_state:
         st.session_state.sample_id = df.index[0]
     # Select sample
@@ -195,7 +195,7 @@ if uploaded_file is not None:
     else:
         st.info("🐙 Mark says: Penalty is OFF. Great for solid tissue samples — I won’t tweak missing values.")
 
-    if st.button("Run MLMarker", width='stretch'):
+    if st.button("Run MLMarker"):
         mark_says("Markverse/cropped_images/Mark knitting.png", "Seeing some cool tissues there?")
 
         model = load_model(st.session_state.penalty, analysis_type)
@@ -227,4 +227,4 @@ if uploaded_file is not None:
             yaxis=dict(automargin=True)
         )
 
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig)
