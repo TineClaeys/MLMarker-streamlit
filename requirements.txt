@@ -1,17 +1,17 @@
-# Core ML package (brings its own numpy, scikit-learn, shap, pandas, etc.)
+# Pin versions that work locally
+shap==0.42.0
+scikit-learn==1.6.1
+
+# Core ML package
 mlmarker
 
 # Web app
 streamlit>=1.35
 plotly
 
-# Additional functionality not in mlmarker
+# Additional functionality
 gprofiler-official
 bioservices
 openpyxl
 matplotlib-venn
 altair<5
-
-plotly
-openpyxl
-wheel==0.44.0
