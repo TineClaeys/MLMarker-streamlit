@@ -103,24 +103,61 @@ def read_file(file):
 
 # --- Clean input ---
 def clean_input(df):
+    print(f"[DEBUG clean_input] Input df shape: {df.shape}")
+    print(f"[DEBUG clean_input] Input columns (first 5): {df.columns[:5].tolist()}")
     df.columns = df.columns.str.strip()
     df = df.set_index(df.columns[0])
-    return df.apply(pd.to_numeric, errors='coerce')
+    df = df.apply(pd.to_numeric, errors='coerce')
+    print(f"[DEBUG clean_input] Output df shape: {df.shape}")
+    print(f"[DEBUG clean_input] Output index: {df.index.tolist()}")
+    print(f"[DEBUG clean_input] Output columns (first 5): {df.columns[:5].tolist()}")
+    return df
 
 # --- Preprocess one sample only ---
 def preprocess_sample(sample_df, method):
+    print(f"[DEBUG preprocess_sample] Input sample_df shape: {sample_df.shape}")
+    print(f"[DEBUG preprocess_sample] Input sample_df index: {sample_df.index.tolist()}")
+    print(f"[DEBUG preprocess_sample] Method: {method}")
+    print(f"[DEBUG preprocess_sample] NaN count before fillna: {sample_df.isna().sum().sum()}")
+    
     # Fill NaN values with 0 before processing for MLMarker
     sample_df = sample_df.fillna(0)
+    print(f"[DEBUG preprocess_sample] NaN count after fillna: {sample_df.isna().sum().sum()}")
+    
     if method == "Quantified proteins":
         scaler = MinMaxScaler()
-        return pd.DataFrame(scaler.fit_transform(sample_df.T).T,
+        result = pd.DataFrame(scaler.fit_transform(sample_df.T).T,
                             index=sample_df.index, columns=sample_df.columns)
+        print(f"[DEBUG preprocess_sample] Output shape after MinMaxScaler: {result.shape}")
+        print(f"[DEBUG preprocess_sample] Output min/max: {result.values.min()}, {result.values.max()}")
+        return result
     else:
-        return sample_df.map(lambda x: 1 if x > 0 else 0)
+        result = sample_df.map(lambda x: 1 if x > 0 else 0)
+        print(f"[DEBUG preprocess_sample] Output shape after binarization: {result.shape}")
+        return result
 
 # --- Run MLMarker prediction ---
 def run_mlmarker(model, sample_df):
+    print(f"[DEBUG run_mlmarker] Input sample_df shape: {sample_df.shape}")
+    print(f"[DEBUG run_mlmarker] Input sample_df columns (first 5): {sample_df.columns[:5].tolist()}")
+    print(f"[DEBUG run_mlmarker] Model features count: {len(model.explainability.features)}")
+    
     model.load_sample(sample_df)
+    
+    print(f"[DEBUG run_mlmarker] After load_sample - model.explainability.sample shape: {model.explainability.sample.shape}")
+    print(f"[DEBUG run_mlmarker] Model classes count: {len(model.model.classes_)}")
+    
+    # Debug: Check what SHAP will see
+    import shap as shap_debug
+    explainer = shap_debug.TreeExplainer(model.model)
+    shap_values = explainer.shap_values(sample_df)
+    print(f"[DEBUG run_mlmarker] SHAP values type: {type(shap_values)}")
+    if isinstance(shap_values, list):
+        print(f"[DEBUG run_mlmarker] SHAP is list with {len(shap_values)} elements")
+        print(f"[DEBUG run_mlmarker] Each element shape: {shap_values[0].shape}")
+        print(f"[DEBUG run_mlmarker] np.array(shap_values).shape: {np.array(shap_values).shape}")
+    else:
+        print(f"[DEBUG run_mlmarker] SHAP array shape: {shap_values.shape}")
 
     return model.explainability.get_shap_values(n_preds=34)
 
@@ -199,10 +236,25 @@ if uploaded_file is not None:
     if st.button("Run MLMarker"):
         mark_says("Markverse/cropped_images/Mark knitting.png", "Seeing some cool tissues there?")
 
+        print(f"[DEBUG Main] Starting MLMarker run...")
+        print(f"[DEBUG Main] analysis_type: {analysis_type}")
+        print(f"[DEBUG Main] penalty: {st.session_state.penalty}")
+        print(f"[DEBUG Main] sample_id: {st.session_state.sample_id}")
+        
         model = load_model(st.session_state.penalty, analysis_type)
+        print(f"[DEBUG Main] Model loaded - binary: {model.binary}, penalty_factor: {model.penalty_factor}")
+        print(f"[DEBUG Main] Model features count: {len(model.explainability.features)}")
+        print(f"[DEBUG Main] Model features (first 5): {model.explainability.features[:5]}")
+        
         sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
+        print(f"[DEBUG Main] Selected sample_df shape: {sample_df.shape}")
+        print(f"[DEBUG Main] Selected sample_df columns (first 5): {sample_df.columns[:5].tolist()}")
+        
         st.session_state.sel_sample= sample_id
         processed_sample = preprocess_sample(sample_df, analysis_type)
+        print(f"[DEBUG Main] Processed sample shape: {processed_sample.shape}")
+        print(f"[DEBUG Main] Processed sample columns (first 5): {processed_sample.columns[:5].tolist()}")
+        
         prediction_df = run_mlmarker(model, processed_sample)
 
         summed_pred = prediction_df.sum(axis=1)
