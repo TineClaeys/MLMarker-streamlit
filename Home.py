@@ -242,7 +242,9 @@ if uploaded_file is not None:
         print(f"[DEBUG Main] sample_id: {st.session_state.sample_id}")
         
         model = load_model(st.session_state.penalty, analysis_type)
-        print(f"[DEBUG Main] Model loaded - binary: {model.binary}, penalty_factor: {model.penalty_factor}")
+        print(f"[DEBUG Main] Model loaded successfully")
+        print(f"[DEBUG Main] Model type: {type(model)}")
+        print(f"[DEBUG Main] Model attributes: {[attr for attr in dir(model) if not attr.startswith('_')]}")
         print(f"[DEBUG Main] Model features count: {len(model.explainability.features)}")
         print(f"[DEBUG Main] Model features (first 5): {model.explainability.features[:5]}")
         
