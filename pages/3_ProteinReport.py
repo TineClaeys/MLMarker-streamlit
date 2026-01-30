@@ -8,9 +8,9 @@ from plotly.subplots import make_subplots
 import mlmarker
 import seaborn as sns
 import matplotlib.pyplot as plt
-from mlmarker.explainability import get_hpa_info
+from mlmarker.utils import get_hpa_info
 import numpy as np# GO enrichment
-from mlmarker import get_go_enrichment
+from mlmarker.utils import get_go_enrichment
 from plotly.subplots import make_subplots
 from gprofiler import GProfiler
 import plotly.graph_objects as go

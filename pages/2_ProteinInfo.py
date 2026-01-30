@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 import mlmarker
 import seaborn as sns
 import matplotlib.pyplot as plt
-from mlmarker.explainability import get_hpa_info
+from mlmarker.utils import get_hpa_info
 import numpy as np
 import io
 import streamlit.components.v1 as components
