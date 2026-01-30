@@ -16,6 +16,7 @@ scaler = MinMaxScaler()
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import mlmarker
+from mlmarker.model import MLMarker
 import io
 import streamlit.components.v1 as components
 import base64
@@ -123,33 +124,82 @@ def run_mlmarker(model, sample_df):
     model.load_sample(sample_df)
     return model.explainability.get_shap_values(n_preds=34)
 
+
+# --- Functions for multi-sample support ---
+@st.cache_data
+def get_mlmarker_features():
+    """Get the set of MLMarker model features."""
+    model = MLMarker()
+    return set(model.get_model_features())
+
+
+def calculate_coverage(sample_df, mlmarker_features):
+    """Calculate the coverage of MLMarker features in a sample."""
+    sample_row = sample_df.iloc[0]
+    detected_proteins = sample_row[sample_row.notna() & (sample_row != 0)]
+    detected_set = set(detected_proteins.index)
+    mlmarker_overlap = detected_set.intersection(mlmarker_features)
+    
+    return {
+        'total_proteins': len(detected_set),
+        'mlmarker_detected': len(mlmarker_overlap),
+        'coverage_pct': 100 * len(mlmarker_overlap) / len(mlmarker_features) if mlmarker_features else 0
+    }
+
+
+def run_mlmarker_batch(df, sample_settings, progress_callback=None):
+    """Run MLMarker on multiple samples with individual settings."""
+    results = {}
+    total_samples = len(sample_settings)
+    
+    for idx, (sample_id, settings) in enumerate(sample_settings.items()):
+        if progress_callback:
+            progress_callback((idx + 1) / total_samples, f"Processing {sample_id}...")
+        
+        model = load_model(settings['penalty'], settings['analysis_type'])
+        sample_df = df.loc[[sample_id]]
+        processed_sample = preprocess_sample(sample_df, settings['analysis_type'])
+        model.load_sample(processed_sample)
+        prediction_df = model.explainability.get_shap_values(n_preds=34)
+        
+        summed_pred = prediction_df.sum(axis=1)
+        summed_pred[summed_pred < 0] = 0
+        summed_pred /= summed_pred.sum()
+        
+        results[sample_id] = {
+            'prediction_df': prediction_df,
+            'summed_pred': summed_pred,
+            'settings': settings
+        }
+    
+    return results
+
     
 all_possible_tissues = sorted(['Nasal Polyps', 'Duodenum', 'Small intestine', 'Parotid gland', 'Colon', 'Liver', 'Ovary', 'Testis', 'B-cells', 'Prostate', 'Esophagus', 'Skeletal muscle', 'Stomach', 'Adrenal gland', 'Appendix', 'Salivary gland', 'Urinary bladder', 'Smooth muscle', 'Oviduct', 'Lung', 'Pituitary gland', 'Brain', 'Placenta', 'Tonsil', 'Endometrium', 'Rectum', 'Lymph node', 'Thyroid', 'Bone marrow', 'Kidney', 'Adipose tissue', 'Heart', 'Monocytes', 'Spleen'])
-# -- documentation --
-eft_co, cent_co,last_co = st.columns(3)
-with cent_co:
-    st.image('logo.png')
-st.write("MLMarker is a machine learning-based tool for predicting tissue-specific protein expression patterns. It uses a pre-trained model to analyze protein data and provide insights into the tissue distribution of proteins based on 34 possible tissues.")
 
-with st.expander("ℹ️ What is MLMarker? Click to learn more!", expanded=False):
-    st.markdown(f"""
-    **MLMarker** is a machine learning-based tool for predicting tissue-specific protein expression patterns.
-
-    - Uses a pre-trained model to analyze protein data.
-    - Supports **quantitative** and **binary** analysis.
-    - Ideal for inferring tissue origin of proteomics samples.
-    - ⚠️ For sparse samples (e.g. fluids or cell lines), enable the penalty option to reduce bias from absent proteins.
-
-    **Input format:** 
-    - Rows = samples
-    - Columns = proteins
-    - First column = sample IDs
-
-    **Possible tissue classes (n=34):**
-    """)
-    st.markdown(", ".join(all_possible_tissues))
+# --- Sidebar ---
 with st.sidebar:
-    mark_says("Markverse/cropped_images/octopus.png", "Hi there! I'm Mark and I'll help you out! Let's predict what tissue is in your sample.")
+    mark_says("Markverse/cropped_images/octopus.png", "Hi! I'm Mark. Let's predict what tissue is in your sample!")
+
+# --- Header ---
+col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
+with col_logo2:
+    st.image('logo.png')
+
+st.caption("Predict tissue origin from proteomics data using machine learning")
+
+with st.expander("About MLMarker", expanded=False):
+    st.markdown(f"""
+    **MLMarker** predicts tissue-specific protein expression patterns using machine learning.
+
+    - Supports **quantitative** and **binary** analysis
+    - Ideal for inferring tissue origin of proteomics samples
+    - Enable penalty for sparse samples (fluids, cell lines, organoids)
+
+    **Input:** Rows = samples, Columns = proteins, First column = sample IDs
+
+    **34 tissue classes:** {', '.join(all_possible_tissues[:10])}...
+    """)
 
 # --- Load protein data ---
 protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
@@ -158,23 +208,23 @@ st.session_state["protein_df"] = protein_df
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 
-# --- Upload & display ---
-col1, col2 = st.columns(2)
-with col1: 
-    st.markdown("#####")
-    st.write("""Upload your data in the format of columns as proteins and rows as samples. 
-    The first column should contain the sample IDs.""")
-with col2:
-    file = st.file_uploader("Upload your file", type=["csv", "tsv", "xlsx"],  help="Upload proteomics data with samples as rows and proteins as columns.")
-    # Simulate uploaded file when test button is pressed
-    test_button = st.button("Test with example file")
+# --- Upload section ---
+st.markdown("---")
+st.markdown("### Upload Data")
+
+col1, col2 = st.columns([1, 2])
+with col1:
+    st.markdown("**Format:** Proteins as columns, samples as rows")
+    test_button = st.button("Try Example Data")
     if test_button:
-        mark_says("Markverse/cropped_images/octopus.png", "Exciting, let me show you around!")
-        file = "testsample.tsv"
-        st.session_state.uploaded_file = file    
-if file is not None:
-    st.session_state.uploaded_file = file
-st.markdown("##")
+        mark_says("Markverse/cropped_images/octopus.png", "Let me show you around!")
+        st.session_state.uploaded_file = "testsample.tsv"
+
+with col2:
+    file = st.file_uploader("Upload file", type=["csv", "tsv", "xlsx"], label_visibility="collapsed")
+    if file is not None:
+        st.session_state.uploaded_file = file
+
 uploaded_file = st.session_state.uploaded_file
 if uploaded_file is not None:
     df = read_file(uploaded_file)
@@ -183,51 +233,305 @@ if uploaded_file is not None:
     st.write("Uploaded data preview:")
     st.dataframe(df)
     st.write(df.shape)
-    if "sample_id" not in st.session_state:
-        st.session_state.sample_id = df.index[0]
-    # Select sample
-    sample_id = st.selectbox("Select sample to analyze", df.index.tolist(), key="sample_id", help="This application allows you to run one sample at a time which you should select here. If you want to analyze at higher throughputs, use the python package")
+    
+    # Get MLMarker features for coverage calculation
+    mlmarker_features = get_mlmarker_features()
+    
+    # --- Sample Mode Selection ---
+    st.markdown("---")
+    sample_mode = st.radio(
+        "How many samples do you want to analyze?",
+        ["Single sample", "Multiple samples"],
+        horizontal=True,
+        help="Single sample: detailed analysis of one sample. Multiple samples: batch processing with comparative analysis."
+    )
+    
+    if sample_mode == "Single sample":
+        # ============================================
+        # SINGLE SAMPLE MODE (original behavior)
+        # ============================================
+        if "sample_id" not in st.session_state:
+            st.session_state.sample_id = df.index[0]
+        # Select sample
+        sample_id = st.selectbox("Select sample to analyze", df.index.tolist(), key="sample_id", help="This application allows you to run one sample at a time which you should select here. If you want to analyze at higher throughputs, use the python package")
 
-    # Choose analysis type and penalty
-    analysis_type = st.selectbox("Use quantified or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
-    penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
-    if penalty == "Yes":
-        st.warning("🐙 Mark says: Penalty is ON. I’ll down-weight missing proteins — perfect for cell lines, fluids, or organoids!")
+        # Choose analysis type and penalty
+        analysis_type = st.selectbox("Use quantified or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
+        penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
+        
+        if penalty == "Yes":
+            mark_says("Markverse/cropped_images/Coding Mark.png", "Penalty is ON! I'll down-weight missing proteins - perfect for cell lines, fluids, or organoids!")
+        else:
+            mark_says("Markverse/cropped_images/Mark on a book.png", "Penalty is OFF. Great for solid tissue samples - I won't tweak missing values.")
+
+        if st.button("Run MLMarker"):
+            mark_says("Markverse/cropped_images/Mark knitting.png", "Seeing some cool tissues there? Let me analyze this for you!")
+
+            model = load_model(st.session_state.penalty, analysis_type)
+            sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
+            st.session_state.sel_sample= sample_id
+            processed_sample = preprocess_sample(sample_df, analysis_type)
+            model.load_sample(processed_sample)
+            prediction_df = model.explainability.get_shap_values(n_preds=34)
+
+            summed_pred = prediction_df.sum(axis=1)
+            summed_pred[summed_pred < 0] = 0
+            summed_pred /= summed_pred.sum()
+            st.session_state.prediction_summed = summed_pred
+            st.session_state.prediction = prediction_df
+
+            summed_pred= summed_pred.reset_index().rename(columns={"tissue": "Tissue", 0:"Similarity"})
+
+            fig = px.bar(summed_pred.sort_values(by="Similarity", ascending=True), 
+                            x="Similarity", y="Tissue", title="Tissue Similarity Prediction", 
+                            orientation="h", labels={'value': 'Similarity', 'index': 'Tissue'})
+
+            fig.update_traces(textposition='auto', insidetextanchor='start')
+
+            bar_count = len(summed_pred)
+            fig.update_layout(
+                height=30 * bar_count,
+                margin=dict(l=120, r=40, t=60, b=60),
+                yaxis=dict(automargin=True)
+            )
+
+            st.plotly_chart(fig)
+    
     else:
-        st.info("🐙 Mark says: Penalty is OFF. Great for solid tissue samples — I won’t tweak missing values.")
-
-    if st.button("Run MLMarker"):
-        mark_says("Markverse/cropped_images/Mark knitting.png", "Seeing some cool tissues there?")
-
-        model = load_model(st.session_state.penalty, analysis_type)
-        sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
-        st.session_state.sel_sample= sample_id
-        processed_sample = preprocess_sample(sample_df, analysis_type)
-        model.load_sample(processed_sample)
-        prediction_df = model.explainability.get_shap_values(n_preds=34)
-
-        summed_pred = prediction_df.sum(axis=1)
-        summed_pred[summed_pred < 0] = 0
-        #rename columns Tissue and Similarity
-        summed_pred /= summed_pred.sum()
-        st.session_state.prediction_summed = summed_pred
-        st.session_state.prediction = prediction_df
-        #make a barplot of prediction_summed
-
-        summed_pred= summed_pred.reset_index().rename(columns={"tissue": "Tissue", 0:"Similarity"})
-
-        fig = px.bar(summed_pred.sort_values(by="Similarity", ascending=True), 
-                        x="Similarity", y="Tissue", title="Tissue Similarity Prediction", 
-                        orientation="h", labels={'value': 'Similarity', 'index': 'Tissue'})
-
-        fig.update_traces(textposition='auto', insidetextanchor='start')
-
-        bar_count = len(summed_pred)
-        fig.update_layout(
-            height=30 * bar_count,
-            margin=dict(l=120, r=40, t=60, b=60),
-            yaxis=dict(automargin=True)
-        )
-
-        st.plotly_chart(fig)
+        # ============================================
+        # MULTIPLE SAMPLES MODE
+        # ============================================
+        st.markdown("### Multi-Sample Analysis")
+        
+        # Calculate coverage for all samples
+        coverage_data = []
+        for sample_id in df.index:
+            sample_df = df.loc[[sample_id]]
+            cov = calculate_coverage(sample_df, mlmarker_features)
+            cov['sample_id'] = sample_id
+            coverage_data.append(cov)
+        
+        coverage_df = pd.DataFrame(coverage_data)
+        low_coverage_samples = set(coverage_df[coverage_df['coverage_pct'] < 5]['sample_id'])
+        
+        # Initialize editable table data in session state
+        if "sample_table" not in st.session_state or len(st.session_state.sample_table) != len(df.index):
+            table_data = []
+            for _, row in coverage_df.iterrows():
+                sample_id = row['sample_id']
+                is_low_cov = sample_id in low_coverage_samples
+                table_data.append({
+                    'Select': True,
+                    'Sample': sample_id,
+                    'Coverage': f"{row['coverage_pct']:.1f}%",
+                    'Features': int(row['mlmarker_detected']),
+                    'Low Cov': '🔴' if is_low_cov else '',
+                    'Penalty': False,
+                    'Analysis': 'Quantified proteins',
+                    '_low_cov': is_low_cov  # hidden flag
+                })
+            st.session_state.sample_table = table_data
+            st.session_state.changes_applied = True  # Initially ready to run
+        
+        # Track if changes need to be applied
+        if "changes_applied" not in st.session_state:
+            st.session_state.changes_applied = True
+        
+        # Show warning and button for low coverage samples
+        if len(low_coverage_samples) > 0:
+            col_warn, col_btn = st.columns([3, 1])
+            with col_warn:
+                st.warning(f"**{len(low_coverage_samples)} sample(s)** have <5% coverage (highlighted in red)")
+            with col_btn:
+                if st.button("Enable Penalty for Low Coverage", use_container_width=True):
+                    for i, row in enumerate(st.session_state.sample_table):
+                        if row['_low_cov']:
+                            st.session_state.sample_table[i]['Penalty'] = True
+                    st.rerun()
+        
+        # Create the editable dataframe
+        table_df = pd.DataFrame(st.session_state.sample_table)
+        
+        # Configure columns for data editor
+        column_config = {
+            'Select': st.column_config.CheckboxColumn(
+                'Select',
+                help='Include sample in analysis',
+                default=True,
+                width='small'
+            ),
+            'Sample': st.column_config.TextColumn(
+                'Sample',
+                disabled=True,
+                width='medium'
+            ),
+            'Coverage': st.column_config.TextColumn(
+                'Coverage',
+                disabled=True,
+                width='small'
+            ),
+            'Features': st.column_config.NumberColumn(
+                'Features',
+                disabled=True,
+                width='small',
+                help='MLMarker features detected'
+            ),
+            'Low Cov': st.column_config.TextColumn(
+                '⚠️',
+                disabled=True,
+                width='small',
+                help='Low coverage indicator (<5%)'
+            ),
+            'Penalty': st.column_config.CheckboxColumn(
+                'Penalty',
+                help='Enable for sparse samples (fluids, cell lines)',
+                default=False,
+                width='small'
+            ),
+            'Analysis': st.column_config.SelectboxColumn(
+                'Analysis',
+                options=['Quantified proteins', 'Binary quantification'],
+                default='Quantified proteins',
+                width='medium'
+            ),
+            '_low_cov': None  # Hide this column
+        }
+        
+        # Display editable table - use on_change=None to prevent auto-reruns
+        display_cols = ['Select', 'Sample', 'Coverage', 'Features', 'Low Cov', 'Penalty', 'Analysis']
+        
+        # Use a form to prevent reruns on every edit
+        with st.form("sample_selection_form"):
+            edited_df = st.data_editor(
+                table_df[display_cols],
+                column_config=column_config,
+                use_container_width=True,
+                hide_index=True,
+                num_rows='fixed',
+                key='sample_editor'
+            )
+            
+            # Quick action buttons inside form
+            col_sel1, col_sel2, col_sel3, col_sel4 = st.columns(4)
+            with col_sel1:
+                select_all = st.form_submit_button("Select All", use_container_width=True)
+            with col_sel2:
+                deselect_all = st.form_submit_button("Deselect All", use_container_width=True)
+            with col_sel3:
+                reset_settings = st.form_submit_button("Reset Settings", use_container_width=True)
+            with col_sel4:
+                apply_changes = st.form_submit_button("Apply Changes", use_container_width=True, type="primary")
+        
+        # Handle form submissions
+        if select_all:
+            for i in range(len(st.session_state.sample_table)):
+                st.session_state.sample_table[i]['Select'] = True
+            st.rerun()
+        elif deselect_all:
+            for i in range(len(st.session_state.sample_table)):
+                st.session_state.sample_table[i]['Select'] = False
+            st.rerun()
+        elif reset_settings:
+            del st.session_state.sample_table
+            st.rerun()
+        elif apply_changes:
+            # Update session state with edits only when Apply is clicked
+            for i, row in edited_df.iterrows():
+                st.session_state.sample_table[i]['Select'] = row['Select']
+                st.session_state.sample_table[i]['Penalty'] = row['Penalty']
+                st.session_state.sample_table[i]['Analysis'] = row['Analysis']
+            st.rerun()
+        
+        # Check if there are pending changes by comparing edited_df with session state
+        has_pending_changes = False
+        for i, row in edited_df.iterrows():
+            saved = st.session_state.sample_table[i]
+            if (row['Select'] != saved['Select'] or 
+                row['Penalty'] != saved['Penalty'] or 
+                row['Analysis'] != saved['Analysis']):
+                has_pending_changes = True
+                break
+        
+        # Build selected samples dict for processing (use session state, not edited_df)
+        selected_samples = {}
+        for row in st.session_state.sample_table:
+            if row['Select']:
+                selected_samples[row['Sample']] = {
+                    'analysis_type': row['Analysis'],
+                    'penalty': 'Yes' if row['Penalty'] else 'No',
+                    'selected': True
+                }
+        
+        st.markdown(f"**{len(selected_samples)} samples** selected for analysis")
+        
+        # Check if button should be enabled (no pending changes and samples selected)
+        can_run = not has_pending_changes and len(selected_samples) > 0
+        
+        if has_pending_changes:
+            st.caption("⚠️ Click **Apply Changes** to enable the Run button.")
+        else:
+            st.caption("Edit the table above and click **Apply Changes** to confirm your selections.")
+        
+        # Run MLMarker button with conditional styling
+        if st.button(
+            "Run MLMarker", 
+            type="primary" if can_run else "secondary", 
+            disabled=not can_run, 
+            use_container_width=True,
+            help="Apply your changes first" if has_pending_changes else None
+        ):
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            def update_progress(progress, text):
+                progress_bar.progress(progress)
+                status_text.text(text)
+            
+            results = run_mlmarker_batch(df, selected_samples, update_progress)
+            
+            st.session_state.batch_results = results
+            st.session_state.batch_coverage = coverage_df[coverage_df['sample_id'].isin(selected_samples.keys())]
+            
+            status_text.text("Done!")
+            mark_says("Markverse/cropped_images/Mark digging for gold.png", f"Processed {len(results)} samples!")
+            st.success(f"Processed {len(results)} samples!")
+        
+        # Display results if available
+        if "batch_results" in st.session_state and st.session_state.batch_results:
+            st.markdown("---")
+            st.markdown("### Results")
+            
+            results = st.session_state.batch_results
+            
+            # Summary table
+            summary_data = []
+            for sample_id, result in results.items():
+                top_tissue = result['summed_pred'].idxmax()
+                top_prob = result['summed_pred'].max()
+                summary_data.append({
+                    'Sample': sample_id,
+                    'Top Tissue': top_tissue,
+                    'Probability': f"{top_prob:.1%}"
+                })
+            
+            summary_df = pd.DataFrame(summary_data)
+            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            
+            # Heatmap
+            with st.expander("View Heatmap"):
+                heatmap_data = pd.DataFrame({
+                    sample_id: result['summed_pred'] 
+                    for sample_id, result in results.items()
+                }).T
+                
+                fig = px.imshow(
+                    heatmap_data,
+                    labels=dict(x="Tissue", y="Sample", color="Probability"),
+                    aspect="auto",
+                    color_continuous_scale="RdYlBu_r"
+                )
+                fig.update_layout(height=max(300, 25 * len(results)))
+                st.plotly_chart(fig, use_container_width=True)
+            
+            st.info("Go to **Comparison** page for detailed analysis.")
 

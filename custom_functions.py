@@ -239,6 +239,8 @@ def prediction_df_2tissues_scatterplot(df, tissues=list):
 import io
 import streamlit.components.v1 as components
 import base64
+import streamlit as st
+
 def mark_says(image_path, message):
         with open(image_path, "rb") as img_file:
             octo_base64 = base64.b64encode(img_file.read()).decode()
@@ -262,3 +264,91 @@ def mark_says(image_path, message):
                 style="cursor:pointer; margin-left:10px; font-weight:bold; font-size:18px;">×</span>
         </div>
         """, height=110)
+
+
+def get_sample_data():
+    """
+    Global helper to get the current sample data.
+    Returns (prediction_df, prediction_summed, sample_name, is_batch) or (None, None, None, False) if no data.
+    """
+    has_batch = "batch_results" in st.session_state and st.session_state.batch_results
+    has_single = "prediction" in st.session_state and "prediction_summed" in st.session_state
+    
+    if not has_batch and not has_single:
+        return None, None, None, False
+    
+    if has_batch:
+        # Use global selected sample if set, otherwise first sample
+        sample_ids = list(st.session_state.batch_results.keys())
+        if "global_selected_sample" not in st.session_state:
+            st.session_state.global_selected_sample = sample_ids[0]
+        elif st.session_state.global_selected_sample not in sample_ids:
+            st.session_state.global_selected_sample = sample_ids[0]
+        
+        sample = st.session_state.global_selected_sample
+        result = st.session_state.batch_results[sample]
+        return result['prediction_df'], result['summed_pred'], sample, True
+    else:
+        return (
+            st.session_state["prediction"],
+            st.session_state["prediction_summed"],
+            st.session_state.get("sel_sample", "Sample"),
+            False
+        )
+
+
+def render_sample_selector(page_key="default"):
+    """
+    Renders a global sample selector in the sidebar. 
+    Call this at the top of each analysis page.
+    Returns the current sample name.
+    """
+    has_batch = "batch_results" in st.session_state and st.session_state.batch_results
+    
+    if has_batch:
+        sample_ids = list(st.session_state.batch_results.keys())
+        
+        # Get current selection
+        if "global_selected_sample" not in st.session_state:
+            st.session_state.global_selected_sample = sample_ids[0]
+        
+        current_idx = 0
+        if st.session_state.global_selected_sample in sample_ids:
+            current_idx = sample_ids.index(st.session_state.global_selected_sample)
+        
+        selected = st.selectbox(
+            "Select Sample",
+            sample_ids,
+            index=current_idx,
+            key=f"sample_selector_{page_key}"
+        )
+        
+        # Update global state
+        st.session_state.global_selected_sample = selected
+        return selected
+    else:
+        return st.session_state.get("sel_sample", "Sample")
+
+
+def render_workflow_progress(current_step):
+    """
+    Renders a workflow progress indicator in the sidebar.
+    Steps: 1=Home, 2=QC, 3=Visualisations, 4=Proteins, 5=Functional, 6=Comparison
+    """
+    steps = [
+        ("Home", "Upload & Run"),
+        ("QC", "Quality Check"),
+        ("Visualisations", "View Results"),
+        ("Proteins", "Explore Proteins"),
+        ("Functional", "ORA Analysis"),
+        ("Comparison", "Compare Samples")
+    ]
+    
+    st.markdown("### Workflow")
+    for i, (name, desc) in enumerate(steps, 1):
+        if i < current_step:
+            st.markdown(f"~~{i}. {name}~~")
+        elif i == current_step:
+            st.markdown(f"**→ {i}. {name}**")
+        else:
+            st.markdown(f"{i}. {name}", help=desc)
