@@ -170,7 +170,7 @@ with col2:
     test_button = st.button("Test with example file", use_container_width=True)
     if test_button:
         mark_says("Markverse/cropped_images/octopus.png", "Exciting, let me show you around!")
-        file = "testsample2.tsv"
+        file = "testsample.tsv"
         st.session_state.uploaded_file = file    
 if file is not None:
     st.session_state.uploaded_file = file
