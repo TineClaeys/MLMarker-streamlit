@@ -203,7 +203,7 @@ if uploaded_file is not None:
         sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
         st.session_state.sel_sample= sample_id
         processed_sample = preprocess_sample(sample_df, analysis_type)
-        model.load_sample(processed_sample[0:1, :])
+        model.load_sample(processed_sample)
         prediction_df = model.explainability.get_shap_values(n_preds=34)
 
         summed_pred = prediction_df.sum(axis=1)
@@ -230,3 +230,4 @@ if uploaded_file is not None:
         )
 
         st.plotly_chart(fig)
+
