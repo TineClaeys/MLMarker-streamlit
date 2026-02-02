@@ -46,7 +46,6 @@ with st.sidebar:
     st.markdown("### Analysis Options")
     show_table = st.checkbox("Protein Table", value=True)
     show_stats = st.checkbox("Statistics", value=False)
-    show_visual = st.checkbox("Visual Summary", value=False)
     
     st.markdown("---")
     mark_says("Markverse/cropped_images/Mark digging for gold.png", f"Exploring proteins for {current_sample}")
@@ -107,7 +106,7 @@ if show_table and len(shap_data) > 0:
     subset = subset.sort_values('SHAP Value', ascending=False, key=abs)
     
     # Pagination
-    page_size = 15
+    page_size = 25
     total_pages = max(1, (len(subset) + page_size - 1) // page_size)
     
     if "protein_page" not in st.session_state:
@@ -190,36 +189,6 @@ if show_stats and len(shap_data) > 0:
     fig.update_layout(height=300, margin=dict(t=40, b=20))
     st.plotly_chart(fig, use_container_width=True)
 
-# ==============================================================================
-# SECTION: Visual Summary
-# ==============================================================================
-if show_visual and len(shap_data) > 0:
-    st.markdown("---")
-    st.markdown("## Visual Summary")
-    
-    # Top contributors
-    top_pro = shap_data.nlargest(10)
-    top_con = shap_data.nsmallest(10).abs()
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        fig = px.bar(
-            x=top_pro.values, y=top_pro.index,
-            orientation='h', title="Top Pro Proteins",
-            color_discrete_sequence=['#27ae60']
-        )
-        fig.update_layout(height=350, margin=dict(t=40), yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        fig = px.bar(
-            x=top_con.values, y=top_con.index,
-            orientation='h', title="Top Con Proteins",
-            color_discrete_sequence=['#c0392b']
-        )
-        fig.update_layout(height=350, margin=dict(t=40), yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True)
 
 # --- Navigation hint ---
 if len(shap_data) > 0:
