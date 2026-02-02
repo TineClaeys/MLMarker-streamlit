@@ -318,27 +318,30 @@ if show_group_comparison:
     else:
         # Group assignment interface
         st.markdown("### Define Groups")
-        st.info("Assign samples to **Group A** or **Group B** for comparison. Leave unchecked samples out of the analysis.")
+        st.info("Assign samples to **Group A** or **Group B** for comparison.")
         
-        # Create columns for group assignment
+        # Use multiselect for cleaner group assignment
         col_assign1, col_assign2 = st.columns(2)
         
-        group_a_samples = []
-        group_b_samples = []
-        
         with col_assign1:
-            st.markdown("**Group A** (e.g., Control)")
-            for sample in sample_ids:
-                if st.checkbox(sample, key=f"grp_a_{sample}"):
-                    group_a_samples.append(sample)
+            group_a_samples = st.multiselect(
+                "Group A (e.g., Control)",
+                options=sample_ids,
+                default=[],
+                key="group_a_select",
+                help="Select samples for the first group."
+            )
         
         with col_assign2:
-            st.markdown("**Group B** (e.g., Disease)")
-            for sample in sample_ids:
-                # Only show if not in group A
-                if sample not in group_a_samples:
-                    if st.checkbox(sample, key=f"grp_b_{sample}"):
-                        group_b_samples.append(sample)
+            # Filter out samples already in Group A
+            available_for_b = [s for s in sample_ids if s not in group_a_samples]
+            group_b_samples = st.multiselect(
+                "Group B (e.g., Disease)",
+                options=available_for_b,
+                default=[],
+                key="group_b_select",
+                help="Select samples for the second group."
+            )
         
         # Show group summary
         col_sum1, col_sum2 = st.columns(2)
