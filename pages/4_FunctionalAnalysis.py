@@ -29,6 +29,12 @@ if prediction_df is None:
     st.warning("No prediction data. Go to **Home** and run MLMarker first.")
     st.stop()
 
+# Check for abundance data
+if "df" not in st.session_state:
+    df = None
+else:
+    df = st.session_state["df"]
+
 # --- Sidebar ---
 with st.sidebar:
     # Sample selector
@@ -56,47 +62,76 @@ if show_selection:
     st.markdown("---")
     st.markdown("## Protein Selection")
     
-    col1, col2 = st.columns(2)
+    # Check if we have proteins from ProteinExplorer
+    has_explorer_proteins = 'selected_proteins' in st.session_state and len(st.session_state.get('selected_proteins', [])) > 0
+    explorer_tissue = st.session_state.get('selected_tissue_for_ora', None)
     
-    with col1:
-        tissues = prediction_summed.index.tolist()
-        # Try to use tissue from ProteinExplorer if available
-        default_tissue = st.session_state.get('selected_tissue_for_ora', tissues[0])
-        if default_tissue not in tissues:
-            default_tissue = tissues[0]
+    # Option to use proteins from ProteinExplorer
+    if has_explorer_proteins:
+        st.info(f"**{len(st.session_state['selected_proteins'])} proteins** transferred from Protein Explorer (Tissue: {explorer_tissue})")
+        use_explorer = st.checkbox("Use proteins from Protein Explorer", value=True, key="use_explorer_proteins")
+    else:
+        use_explorer = False
+        st.caption("Tip: Select proteins in **Protein Explorer** first, then come here to run ORA on them.")
+    
+    if use_explorer:
+        # Use proteins directly from ProteinExplorer
+        selected_proteins = st.session_state['selected_proteins']
+        selected_tissue = explorer_tissue
+        st.success(f"Using **{len(selected_proteins)} proteins** from Protein Explorer for **{selected_tissue}**")
+    else:
+        # Manual selection with same filters as ProteinExplorer
+        st.markdown("### Select Filters")
+        col1, col2, col3 = st.columns(3)
         
-        selected_tissue = st.selectbox(
-            "Tissue", tissues,
-            index=tissues.index(default_tissue),
-            key="ora_tissue"
-        )
+        with col1:
+            tissues = prediction_summed.index.tolist()
+            default_tissue = explorer_tissue if explorer_tissue in tissues else tissues[0]
+            
+            selected_tissue = st.selectbox(
+                "Tissue", tissues,
+                index=tissues.index(default_tissue),
+                key="ora_tissue"
+            )
+        
+        with col2:
+            abundance_filter = st.selectbox(
+                "Abundance", ["All", "Present", "Absent"],
+                key="ora_abundance",
+                help="Filter by protein presence in your sample"
+            )
+        
+        with col3:
+            shap_filter = st.selectbox(
+                "Impact", ["All", "Pro (positive)", "Con (negative)"],
+                key="ora_shap"
+            )
+        
+        # Get proteins based on filters
+        shap_data = prediction_df.loc[selected_tissue]
+        shap_data = shap_data[shap_data != 0]
+        
+        if "Pro" in shap_filter:
+            shap_data = shap_data[shap_data > 0]
+        elif "Con" in shap_filter:
+            shap_data = shap_data[shap_data < 0]
+        
+        # Apply abundance filter if we have abundance data
+        if df is not None and abundance_filter != "All":
+            abundance_data = df.loc[current_sample].fillna(0)
+            if abundance_filter == "Present":
+                valid_proteins = abundance_data[abundance_data > 0].index
+                shap_data = shap_data[shap_data.index.isin(valid_proteins)]
+            elif abundance_filter == "Absent":
+                valid_proteins = abundance_data[abundance_data == 0].index
+                shap_data = shap_data[shap_data.index.isin(valid_proteins)]
+        elif df is None and abundance_filter != "All":
+            st.warning("No abundance data available. Showing all proteins regardless of abundance filter.")
+        
+        selected_proteins = list(shap_data.index)
+        st.markdown(f"**{len(selected_proteins)} proteins** match filters")
     
-    with col2:
-        shap_filter = st.selectbox(
-            "Impact", ["All", "Pro (positive)", "Con (negative)"],
-            key="ora_shap"
-        )
-    
-    # Get proteins
-    shap_data = prediction_df.loc[selected_tissue]
-    shap_data = shap_data[shap_data != 0]
-    
-    if "Pro" in shap_filter:
-        shap_data = shap_data[shap_data > 0]
-    elif "Con" in shap_filter:
-        shap_data = shap_data[shap_data < 0]
-    
-    selected_proteins = list(shap_data.index)
     st.session_state['ora_proteins'] = selected_proteins
-    
-    # Check if proteins came from ProteinExplorer
-    if 'selected_proteins' in st.session_state:
-        prev_proteins = st.session_state['selected_proteins']
-        if set(prev_proteins) != set(selected_proteins):
-            st.info(f"Using {len(selected_proteins)} proteins for {selected_tissue}. "
-                   f"(Previous selection from Protein Explorer: {len(prev_proteins)} proteins)")
-    
-    st.markdown(f"**{len(selected_proteins)} proteins** selected for ORA")
     
     if len(selected_proteins) == 0:
         st.error("No proteins match filters. Adjust selection.")

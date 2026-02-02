@@ -258,7 +258,7 @@ def mark_says(image_path, message):
             align-items: center;
             font-family: 'Source Sans Pro', sans-serif;
         ">
-            <img src="data:image/png;base64,{octo_base64}" style="width:64px;height:60px;margin-right:10px;">
+            <img src="data:image/png;base64,{octo_base64}" style="height:60px;width:auto;margin-right:10px;">
             <div>{message}</div>
              <span onclick="document.getElementById('mark-box').style.display='none';"
                 style="cursor:pointer; margin-left:10px; font-weight:bold; font-size:18px;">×</span>
