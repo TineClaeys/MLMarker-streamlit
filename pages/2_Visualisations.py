@@ -8,6 +8,10 @@ from custom_functions import mark_says, render_sample_selector, get_sample_data
 st.set_page_config(page_title="Visualisations - MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
 
+# Load protein info for name lookup
+protein_df = pd.read_csv('MLMarker_features_bioservice_return.csv')
+protein_name_map = dict(zip(protein_df['id'], protein_df['protein_names']))
+
 # --- Header ---
 st.title("Visualisations")
 st.markdown("""
@@ -15,7 +19,7 @@ Explore how MLMarker interprets your sample through **SHAP values** (SHapley Add
 Each protein contributes positively (**pro**) or negatively (**con**) to each tissue prediction.
 
 - **Tissue Overview**: See total positive vs negative contributions per tissue
-- **Tissue Drilldown**: Identify which proteins drive predictions for a specific tissue
+- **Tissue forceplot**: Identify which proteins drive predictions for a specific tissue
 - **Protein Comparison**: Compare how the same proteins contribute to different tissues
 """)
 
@@ -39,7 +43,7 @@ with st.sidebar:
     
     st.markdown("### Analysis Options")
     show_overview = st.checkbox("Tissue Overview", value=True)
-    show_tissue_detail = st.checkbox("Tissue Drilldown", value=False)
+    show_tissue_detail = st.checkbox("Tissue forceplot", value=False)
     show_scatter = st.checkbox("Protein Comparison", value=False)
     
     st.markdown("---")
@@ -160,11 +164,11 @@ if show_overview:
                   f"Your top prediction is {top_5.index[0]} at {top_5.iloc[0]:.1%}!")
 
 # ==============================================================================
-# SECTION: Tissue Drilldown
+# SECTION: Tissue forceplot
 # ==============================================================================
 if show_tissue_detail:
     st.markdown("---")
-    st.markdown("## Tissue Drilldown")
+    st.markdown("## Tissue forceplot")
     
     tissues = prediction_summed.index.tolist()
     
@@ -180,13 +184,23 @@ if show_tissue_detail:
         )
         st.plotly_chart(fig, use_container_width=True)
         
+        # Helper function to format protein with name
+        def format_protein_list(proteins):
+            formatted = []
+            for p in proteins:
+                name = protein_name_map.get(p, "Unknown")
+                formatted.append(f"**{p}** ({name})")
+            return formatted
+        
         col_pro, col_con = st.columns(2)
         with col_pro:
             st.markdown("**Pro Proteins:**")
-            st.write(", ".join(pro_proteins))
+            for item in format_protein_list(pro_proteins):
+                st.markdown(f"- {item}")
         with col_con:
             st.markdown("**Con Proteins:**")
-            st.write(", ".join(con_proteins))
+            for item in format_protein_list(con_proteins):
+                st.markdown(f"- {item}")
         
         mark_says("Markverse/cropped_images/Mark digging for gold.png", 
                   f"Found {len(pro_proteins)} supporting and {len(con_proteins)} opposing proteins!")
@@ -212,19 +226,6 @@ if show_scatter:
         if st.button("Compare Tissues", key="btn_scatter"):
             fig = scatterplot_tissues(prediction_df, tissue_a, tissue_b)
             st.plotly_chart(fig, use_container_width=True)
-            
-            # Find tissue-specific proteins
-            df_t = prediction_df.T
-            a_specific = df_t[(df_t[tissue_a] > 0.01) & (df_t[tissue_b] < 0.01)].index.tolist()[:5]
-            b_specific = df_t[(df_t[tissue_b] > 0.01) & (df_t[tissue_a] < 0.01)].index.tolist()[:5]
-            
-            if a_specific or b_specific:
-                col1, col2 = st.columns(2)
-                if a_specific:
-                    col1.markdown(f"**{tissue_a}-specific:** {', '.join(a_specific)}")
-                if b_specific:
-                    col2.markdown(f"**{tissue_b}-specific:** {', '.join(b_specific)}")
-            
             mark_says("Markverse/cropped_images/Coding Mark.png", 
                       "Proteins in opposite quadrants have tissue-specific roles!")
     else:
