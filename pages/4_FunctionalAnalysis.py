@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from gprofiler import GProfiler
-from custom_functions import mark_says, render_sample_selector, get_sample_data
+from custom_functions import mark_says, render_sample_selector, get_sample_data, copy_to_clipboard_button, show_help, HELP_CONTENT
 
 st.set_page_config(page_title="Functional Analysis - MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
@@ -136,6 +136,13 @@ if show_selection:
     if len(selected_proteins) == 0:
         st.error("No proteins match filters. Adjust selection.")
         st.stop()
+    
+    # Copy protein IDs button
+    col_count, col_copy = st.columns([2, 1])
+    with col_count:
+        st.caption(f"{len(selected_proteins)} proteins ready for ORA")
+    with col_copy:
+        copy_to_clipboard_button(selected_proteins, "📋 Copy IDs", key=f"copy_ora_{selected_tissue}")
 
 # --- Run ORA ---
 st.markdown("---")
@@ -198,13 +205,19 @@ if 'ora_results' in st.session_state and not st.session_state['ora_results'].emp
         
         st.dataframe(display_df, width='content', height=400)
         
-        # Download
-        st.download_button(
-            "Download Results",
-            filtered.to_csv(index=False),
-            f"ora_{current_sample}_{selected_tissue}.csv",
-            "text/csv"
-        )
+        # Download and copy
+        col_dl, col_cp = st.columns(2)
+        with col_dl:
+            st.download_button(
+                "📥 Download Results",
+                filtered.to_csv(index=False),
+                f"ora_{current_sample}_{selected_tissue}.csv",
+                "text/csv"
+            )
+        with col_cp:
+            # Copy term names to clipboard
+            term_names = '\n'.join(filtered['name'].tolist())
+            copy_to_clipboard_button(term_names, "📋 Copy Terms", key=f"copy_terms_{selected_tissue}")
     
     if show_visual and len(filtered) > 0:
         st.markdown("---")

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from custom_functions import mark_says, render_sample_selector, get_sample_data
+from custom_functions import mark_says, render_sample_selector, get_sample_data, copy_to_clipboard_button, show_help
 
 st.set_page_config(page_title="Protein Explorer - MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
@@ -52,6 +52,33 @@ with st.sidebar:
 
 st.markdown(f"**Current Sample:** {current_sample}")
 
+# --- Search & Custom Protein List ---
+st.markdown("---")
+col_search, col_upload = st.columns([2, 1])
+
+with col_search:
+    st.markdown("### 🔍 Search Proteins")
+    search_query = st.text_input(
+        "Search by UniProt ID or protein name",
+        placeholder="e.g., P04406 or GAPDH or albumin",
+        key="protein_search"
+    )
+
+with col_upload:
+    st.markdown("### 📤 Custom Protein List")
+    custom_proteins_input = st.text_area(
+        "Paste protein IDs (one per line)",
+        placeholder="P04406\nP68871\nP02768",
+        height=100,
+        key="custom_proteins"
+    )
+
+# Process custom protein list
+custom_protein_set = set()
+if custom_proteins_input:
+    custom_protein_set = set(line.strip() for line in custom_proteins_input.split('\n') if line.strip())
+    st.caption(f"📋 {len(custom_protein_set)} proteins in custom list")
+
 # --- Tissue & Filter Selection ---
 st.markdown("### Select Filters")
 col1, col2, col3 = st.columns(3)
@@ -84,6 +111,29 @@ if abundance_filter == "Present":
 elif abundance_filter == "Absent":
     valid_proteins = abundance_data[abundance_data == 0].index
     shap_data = shap_data[shap_data.index.isin(valid_proteins)]
+
+# Apply search filter
+if search_query:
+    search_lower = search_query.lower()
+    # Search in protein IDs and names
+    matching_ids = protein_df[
+        (protein_df['id'].str.lower().str.contains(search_lower, na=False)) |
+        (protein_df['entry name'].str.lower().str.contains(search_lower, na=False)) |
+        (protein_df['protein_names'].str.lower().str.contains(search_lower, na=False))
+    ]['id'].tolist()
+    shap_data = shap_data[shap_data.index.isin(matching_ids)]
+    if len(shap_data) == 0:
+        st.warning(f"No proteins found matching '{search_query}'")
+
+# Apply custom protein list filter
+if custom_protein_set:
+    # Find proteins that are in the custom list AND in SHAP data
+    matching_custom = shap_data.index.intersection(custom_protein_set)
+    if len(matching_custom) > 0:
+        shap_data = shap_data[shap_data.index.isin(custom_protein_set)]
+        st.info(f"Showing {len(matching_custom)} of {len(custom_protein_set)} custom proteins (others not in MLMarker features)")
+    else:
+        st.warning("None of the custom proteins were found in MLMarker features")
 
 # Store for ORA
 st.session_state['selected_proteins'] = list(shap_data.index)
@@ -152,12 +202,18 @@ if show_table and len(shap_data) > 0:
     )
     
     # Download
-    st.download_button(
-        "Download Full Table",
-        subset.to_csv(index=False),
-        f"proteins_{current_sample}_{selected_tissue}.csv",
-        "text/csv"
-    )
+    col_dl, col_cp = st.columns(2)
+    with col_dl:
+        st.download_button(
+            "📥 Download Full Table",
+            subset.to_csv(index=False),
+            f"proteins_{current_sample}_{selected_tissue}.csv",
+            "text/csv"
+        )
+    with col_cp:
+        # Copy protein IDs to clipboard
+        protein_ids = '\n'.join(subset['id'].tolist())
+        copy_to_clipboard_button(protein_ids, "📋 Copy Protein IDs", key=f"copy_proteins_{current_sample}_{selected_tissue}")
 
 elif show_table:
     st.info("No proteins match the current filters.")

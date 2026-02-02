@@ -20,7 +20,7 @@ from mlmarker.model import MLMarker
 import io
 import streamlit.components.v1 as components
 import base64
-from custom_functions import mark_says
+from custom_functions import mark_says, HELP_CONTENT, show_help, render_theme_toggle, get_theme_colors, apply_theme_to_figure, inject_keyboard_shortcuts, render_keyboard_shortcuts_help
 
 
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
@@ -108,6 +108,63 @@ def clean_input(df):
     df = df.set_index(df.columns[0])
     return df.apply(pd.to_numeric, errors='coerce')
 
+
+def validate_data(df):
+    """Validate uploaded data and return warnings/suggestions."""
+    warnings = []
+    suggestions = []
+    info = []
+    
+    # Check for duplicate protein IDs (columns)
+    dup_cols = df.columns[df.columns.duplicated()].tolist()
+    if len(dup_cols) > 0:
+        warnings.append(f"**Duplicate protein IDs found:** {len(dup_cols)} duplicates ({', '.join(dup_cols[:5])}{'...' if len(dup_cols) > 5 else ''})")
+    
+    # Check for duplicate sample IDs (rows)
+    dup_rows = df.index[df.index.duplicated()].tolist()
+    if len(dup_rows) > 0:
+        warnings.append(f"**Duplicate sample IDs found:** {len(dup_rows)} duplicates")
+    
+    # Check for all-zero samples
+    zero_samples = (df.fillna(0) == 0).all(axis=1)
+    if zero_samples.any():
+        warnings.append(f"**Empty samples:** {zero_samples.sum()} sample(s) have all zero/missing values")
+    
+    # Check for negative values
+    neg_count = (df < 0).sum().sum()
+    if neg_count > 0:
+        warnings.append(f"**Negative values found:** {neg_count} negative values detected")
+        suggestions.append("Consider using absolute values or checking your data preprocessing")
+    
+    # Check data range and suggest transformations
+    non_zero = df.replace(0, np.nan)
+    if non_zero.max().max() > 1e6:
+        info.append("**Large values detected** - Data appears to be raw intensities")
+        suggestions.append("MLMarker will normalize your data automatically (MinMax scaling)")
+    
+    # Check if data looks log-transformed already
+    if non_zero.min().min() > 0 and non_zero.max().max() < 50:
+        info.append("**Data appears to be log-transformed** - Values are in a small range")
+    
+    # Check sparsity
+    sparsity = (df.isna() | (df == 0)).sum().sum() / (df.shape[0] * df.shape[1]) * 100
+    if sparsity > 80:
+        warnings.append(f"**High sparsity:** {sparsity:.1f}% of values are zero or missing")
+        suggestions.append("Consider enabling the penalty factor for sparse samples")
+    elif sparsity > 50:
+        info.append(f"**Moderate sparsity:** {sparsity:.1f}% of values are zero or missing")
+    
+    # Check for outlier samples (by total intensity)
+    sample_totals = df.sum(axis=1)
+    if len(sample_totals) > 2:
+        q1, q3 = sample_totals.quantile([0.25, 0.75])
+        iqr = q3 - q1
+        outliers = ((sample_totals < q1 - 3*iqr) | (sample_totals > q3 + 3*iqr)).sum()
+        if outliers > 0:
+            warnings.append(f"**Intensity outliers:** {outliers} sample(s) have unusual total intensity")
+    
+    return warnings, suggestions, info
+
 # --- Preprocess one sample only ---
 def preprocess_sample(sample_df, method):
     # Fill NaN values with 0 before processing for MLMarker
@@ -179,7 +236,15 @@ all_possible_tissues = sorted(['Nasal Polyps', 'Duodenum', 'Small intestine', 'P
 
 # --- Sidebar ---
 with st.sidebar:
+    # Dark mode toggle
+    render_theme_toggle()
+    # Keyboard shortcuts help
+    render_keyboard_shortcuts_help()
+    st.markdown("---")
     mark_says("Markverse/mark pointing.png", "Hi! I'm Mark. Let's predict what tissue is in your sample!")
+
+# Inject keyboard shortcuts
+inject_keyboard_shortcuts()
 
 # --- Header ---
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
@@ -234,6 +299,23 @@ if uploaded_file is not None:
     st.dataframe(df)
     st.write(df.shape)
     
+    # Data validation
+    with st.expander("📊 Data Quality Check", expanded=False):
+        warnings, suggestions, info = validate_data(df)
+        
+        if warnings:
+            for w in warnings:
+                st.warning(w)
+        if suggestions:
+            st.markdown("**💡 Suggestions:**")
+            for s in suggestions:
+                st.caption(f"• {s}")
+        if info:
+            for i in info:
+                st.info(i)
+        if not warnings and not info:
+            st.success("✓ Data looks good! No issues detected.")
+    
     # Get MLMarker features for coverage calculation
     mlmarker_features = get_mlmarker_features()
     
@@ -256,8 +338,19 @@ if uploaded_file is not None:
         sample_id = st.selectbox("Select sample to analyze", df.index.tolist(), key="sample_id", help="This application allows you to run one sample at a time which you should select here. If you want to analyze at higher throughputs, use the python package")
 
         # Choose analysis type and penalty
-        analysis_type = st.selectbox("Use quantified or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
-        penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
+        col_analysis, col_help1 = st.columns([4, 1])
+        with col_analysis:
+            analysis_type = st.selectbox("Use quantified or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
+        with col_help1:
+            st.markdown("")  # Spacer
+            show_help('binary_vs_quantified', "Analysis Types")
+        
+        col_penalty, col_help2 = st.columns([4, 1])
+        with col_penalty:
+            penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
+        with col_help2:
+            st.markdown("")  # Spacer
+            show_help('penalty', "Penalty Factor")
         
         if penalty == "Yes":
             mark_says("Markverse/cropped_images/Coding Mark.png", "Penalty is ON! I'll down-weight missing proteins - perfect for cell lines, fluids, or organoids!")
@@ -451,19 +544,37 @@ if uploaded_file is not None:
                     }
             
             if len(selected_samples) > 0:
-                progress_bar = st.progress(0)
-                status_text = st.empty()
+                # Progress display with detailed feedback
+                progress_container = st.container()
+                with progress_container:
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    time_estimate = st.empty()
+                
+                import time
+                start_time = time.time()
                 
                 def update_progress(progress, text):
                     progress_bar.progress(progress)
-                    status_text.text(text)
+                    status_text.markdown(f"**{text}**")
+                    # Estimate remaining time
+                    if progress > 0:
+                        elapsed = time.time() - start_time
+                        total_estimated = elapsed / progress
+                        remaining = total_estimated - elapsed
+                        if remaining > 60:
+                            time_estimate.caption(f"⏱️ Estimated time remaining: {remaining/60:.1f} minutes")
+                        else:
+                            time_estimate.caption(f"⏱️ Estimated time remaining: {remaining:.0f} seconds")
                 
                 results = run_mlmarker_batch(df, selected_samples, update_progress)
                 
                 st.session_state.batch_results = results
                 st.session_state.batch_coverage = coverage_df[coverage_df['sample_id'].isin(selected_samples.keys())]
                 
-                status_text.text("Done!")
+                progress_bar.progress(1.0)
+                status_text.markdown("**✓ Complete!**")
+                time_estimate.caption(f"⏱️ Total time: {time.time() - start_time:.1f} seconds")
                 mark_says("Markverse/mark_tothemoon.png", f"Processed {len(results)} samples! To the moon!")
                 st.success(f"Processed {len(results)} samples!")
             else:

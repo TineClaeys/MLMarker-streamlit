@@ -241,6 +241,274 @@ import streamlit.components.v1 as components
 import base64
 import streamlit as st
 
+# ==============================================================================
+# HELP CONTENT - Consistent explanations across the app
+# ==============================================================================
+
+HELP_CONTENT = {
+    'shap': """
+**SHAP (SHapley Additive exPlanations)** values explain how each protein contributes to a prediction.
+
+- **Positive SHAP** = Protein supports the tissue prediction (pro)
+- **Negative SHAP** = Protein opposes the tissue prediction (con)
+- **Magnitude** = Strength of the contribution
+
+SHAP values sum up to the final prediction score for each tissue.
+""",
+    'coverage': """
+**Coverage** measures what percentage of MLMarker's 5,979 known proteins were detected in your sample.
+
+- **>20%** = Good coverage, reliable predictions
+- **5-20%** = Moderate coverage, predictions should be reliable
+- **<5%** = Low coverage (typical for fluids, cell lines) - enable penalty factor
+
+Higher coverage generally means more confident predictions.
+""",
+    'penalty': """
+**Penalty Factor** adjusts how MLMarker handles missing proteins.
+
+- **OFF** = Best for solid tissue samples where most proteins should be present
+- **ON** = Best for sparse samples (plasma, urine, cell lines, organoids) where many proteins are naturally absent
+
+When enabled, missing proteins have less negative impact on predictions.
+""",
+    'ora': """
+**Over-Representation Analysis (ORA)** identifies biological functions enriched in your protein list.
+
+Uses g:Profiler to test if your proteins are statistically over-represented in:
+- **GO:BP** = Biological Process
+- **GO:MF** = Molecular Function  
+- **GO:CC** = Cellular Component
+- **HPA** = Human Protein Atlas tissue expression
+- **KEGG** = Pathway annotations
+
+P-value indicates statistical significance of enrichment.
+""",
+    'tissue_probability': """
+**Tissue Probability** represents how similar your sample's protein expression pattern is to each tissue.
+
+- Values range from 0 to 1 (shown as percentages)
+- Higher = More similar to that tissue's expression profile
+- Top prediction = Most likely tissue of origin
+
+Probabilities are normalized to sum to 100% across all tissues.
+""",
+    'binary_vs_quantified': """
+**Analysis Type** determines how protein intensities are used:
+
+- **Quantified**: Uses actual intensity values (MinMax normalized). Best for quantitative proteomics.
+- **Binary**: Only considers presence/absence (1 or 0). Use for semi-quantitative data like Olink.
+
+Quantified analysis generally provides better predictions when intensity values are reliable.
+""",
+    'pca': """
+**PCA (Principal Component Analysis)** reduces high-dimensional data for visualization.
+
+- Samples close together have similar profiles
+- PC1 captures the most variance, PC2 the second most
+- Clustering indicates similar expression patterns
+
+Useful for identifying sample groups and outliers.
+"""
+}
+
+
+def show_help(topic, title=None):
+    """Display a help popover for a given topic."""
+    if topic in HELP_CONTENT:
+        with st.popover("❓" if title is None else f"❓ {title}"):
+            st.markdown(HELP_CONTENT[topic])
+
+
+# ==============================================================================
+# DARK MODE SUPPORT
+# ==============================================================================
+
+def get_theme_colors():
+    """
+    Get color scheme based on Streamlit's theme.
+    Returns a dict with plot-friendly colors.
+    """
+    # Try to detect Streamlit theme from query params or use defaults
+    # Streamlit doesn't expose theme directly, so we use a workaround
+    try:
+        import streamlit as st
+        # Check if user set a preference in session state
+        if "dark_mode" in st.session_state:
+            is_dark = st.session_state.dark_mode
+        else:
+            # Default to light mode (Streamlit's default)
+            is_dark = False
+    except:
+        is_dark = False
+    
+    if is_dark:
+        return {
+            'background': '#0e1117',
+            'paper_bg': '#262730',
+            'text': '#fafafa',
+            'grid': '#4a4a5a',
+            'primary': '#ff4b4b',
+            'secondary': '#1f77b4',
+            'positive': '#2ecc71',
+            'negative': '#e74c3c',
+            'neutral': '#95a5a6',
+            'template': 'plotly_dark'
+        }
+    else:
+        return {
+            'background': '#ffffff',
+            'paper_bg': '#ffffff', 
+            'text': '#31333f',
+            'grid': '#e6e9ef',
+            'primary': '#ff4b4b',
+            'secondary': '#1f77b4',
+            'positive': '#27ae60',
+            'negative': '#c0392b',
+            'neutral': '#7f8c8d',
+            'template': 'plotly_white'
+        }
+
+
+def apply_theme_to_figure(fig, theme_colors=None):
+    """
+    Apply theme colors to a Plotly figure.
+    
+    Parameters:
+        fig: Plotly figure object
+        theme_colors: Dict from get_theme_colors() or None to auto-detect
+    
+    Returns:
+        Modified figure
+    """
+    if theme_colors is None:
+        theme_colors = get_theme_colors()
+    
+    fig.update_layout(
+        template=theme_colors['template'],
+        paper_bgcolor=theme_colors['paper_bg'],
+        plot_bgcolor=theme_colors['background'],
+        font=dict(color=theme_colors['text'])
+    )
+    
+    return fig
+
+
+def render_theme_toggle():
+    """
+    Render a theme toggle in the sidebar.
+    Call this at the start of any page to enable theme switching.
+    """
+    import streamlit as st
+    
+    with st.sidebar:
+        if "dark_mode" not in st.session_state:
+            st.session_state.dark_mode = False
+        
+        dark_mode = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode, key="dark_mode_toggle")
+        st.session_state.dark_mode = dark_mode
+        
+        return dark_mode
+
+
+# ==============================================================================
+# KEYBOARD SHORTCUTS
+# ==============================================================================
+
+def render_keyboard_shortcuts_help():
+    """
+    Display keyboard shortcuts help in an expander.
+    """
+    import streamlit as st
+    
+    with st.expander("⌨️ Keyboard Shortcuts", expanded=False):
+        st.markdown("""
+        | Shortcut | Action |
+        |----------|--------|
+        | `Ctrl + Enter` | Submit form / Run analysis |
+        | `Ctrl + S` | Download results (when available) |
+        | `Ctrl + /` | Show this help |
+        | `Esc` | Close dialogs |
+        
+        *Note: Shortcuts work when the form/page is focused.*
+        """)
+
+
+def inject_keyboard_shortcuts(download_callback_key=None):
+    """
+    Inject keyboard shortcut JavaScript into the page.
+    
+    This enables:
+    - Ctrl+Enter to submit forms
+    - Ctrl+S to trigger downloads
+    
+    Parameters:
+        download_callback_key: Session state key for download button to trigger
+    """
+    import streamlit.components.v1 as components
+    
+    # JavaScript for keyboard shortcuts
+    js_code = """
+    <script>
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+Enter - Submit forms
+        if (e.ctrlKey && e.key === 'Enter') {
+            // Find and click the primary submit button
+            const buttons = document.querySelectorAll('button[kind="primary"]');
+            if (buttons.length > 0) {
+                buttons[0].click();
+                e.preventDefault();
+            }
+        }
+        
+        // Ctrl+S - Trigger download
+        if (e.ctrlKey && e.key === 's') {
+            // Find download buttons
+            const downloadBtns = document.querySelectorAll('button[data-testid="stDownloadButton"]');
+            if (downloadBtns.length > 0) {
+                downloadBtns[0].click();
+                e.preventDefault();
+            }
+        }
+        
+        // Escape - Close any open dialogs
+        if (e.key === 'Escape') {
+            const closeButtons = document.querySelectorAll('[aria-label="Close"]');
+            closeButtons.forEach(btn => btn.click());
+        }
+    });
+    </script>
+    """
+    
+    components.html(js_code, height=0)
+
+
+def copy_to_clipboard_button(text, button_label="📋 Copy", key=None):
+    """Create a button that copies text to clipboard."""
+    # Use a unique key for each button
+    if key is None:
+        import hashlib
+        key = f"copy_{hashlib.md5(str(text).encode()).hexdigest()[:8]}"
+    
+    # JavaScript to copy to clipboard
+    if isinstance(text, list):
+        text = '\n'.join(text)
+    
+    components.html(f"""
+    <button onclick="navigator.clipboard.writeText(`{text}`).then(() => {{
+        this.innerHTML = '✓ Copied!';
+        setTimeout(() => this.innerHTML = '{button_label}', 2000);
+    }})" style="
+        padding: 5px 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background: #f0f2f6;
+        cursor: pointer;
+        font-size: 14px;
+    ">{button_label}</button>
+    """, height=40)
+
+
 def mark_says(image_path, message):
         with open(image_path, "rb") as img_file:
             octo_base64 = base64.b64encode(img_file.read()).decode()

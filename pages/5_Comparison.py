@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from scipy import stats
 import mlmarker
 from custom_functions import mark_says
 
@@ -59,6 +60,8 @@ with st.sidebar:
     
     show_heatmap = st.checkbox("Tissue Probability Heatmap", value=True)
     show_pca = st.checkbox("PCA Analysis", value=False)
+    show_group_comparison = st.checkbox("Group Comparison", value=False, 
+                                        help="Compare two groups of samples with statistical tests")
     show_tissue_analysis = st.checkbox("Tissue-Specific Analysis", value=False)
     show_sample_comparison = st.checkbox("Sample Comparison", value=False)
     show_summary = st.checkbox("Top Tissue Summary", value=False)
@@ -285,6 +288,201 @@ if show_pca:
                       "Samples close together have similar profiles! Look at those patterns!")
     elif pca_matrix is not None:
         st.info("Need at least 3 samples for PCA clustering.")
+
+# ==============================================================================
+# SECTION: Group Comparison with Statistical Tests
+# ==============================================================================
+if show_group_comparison:
+    st.markdown("---")
+    st.markdown("## Group Comparison")
+    st.caption("Compare two groups of samples with statistical tests")
+    
+    if len(sample_ids) < 4:
+        st.warning("Need at least 4 samples (2 per group) for group comparison.")
+    else:
+        # Group assignment interface
+        st.markdown("### Define Groups")
+        st.info("Assign samples to **Group A** or **Group B** for comparison. Leave unchecked samples out of the analysis.")
+        
+        # Create columns for group assignment
+        col_assign1, col_assign2 = st.columns(2)
+        
+        group_a_samples = []
+        group_b_samples = []
+        
+        with col_assign1:
+            st.markdown("**Group A** (e.g., Control)")
+            for sample in sample_ids:
+                if st.checkbox(sample, key=f"grp_a_{sample}"):
+                    group_a_samples.append(sample)
+        
+        with col_assign2:
+            st.markdown("**Group B** (e.g., Disease)")
+            for sample in sample_ids:
+                # Only show if not in group A
+                if sample not in group_a_samples:
+                    if st.checkbox(sample, key=f"grp_b_{sample}"):
+                        group_b_samples.append(sample)
+        
+        # Show group summary
+        col_sum1, col_sum2 = st.columns(2)
+        with col_sum1:
+            st.metric("Group A", f"{len(group_a_samples)} samples")
+        with col_sum2:
+            st.metric("Group B", f"{len(group_b_samples)} samples")
+        
+        # Run analysis if both groups have samples
+        if len(group_a_samples) >= 2 and len(group_b_samples) >= 2:
+            st.markdown("---")
+            st.markdown("### Statistical Comparison")
+            
+            # Get probabilities for each group
+            group_a_probs = prob_matrix.loc[group_a_samples]
+            group_b_probs = prob_matrix.loc[group_b_samples]
+            
+            # Calculate statistics for each tissue
+            stats_results = []
+            for tissue in all_tissues:
+                a_vals = group_a_probs[tissue].values
+                b_vals = group_b_probs[tissue].values
+                
+                # t-test
+                t_stat, t_pval = stats.ttest_ind(a_vals, b_vals, equal_var=False)
+                
+                # Mann-Whitney U test (non-parametric)
+                try:
+                    u_stat, u_pval = stats.mannwhitneyu(a_vals, b_vals, alternative='two-sided')
+                except ValueError:
+                    u_stat, u_pval = np.nan, np.nan
+                
+                # Effect size (Cohen's d)
+                pooled_std = np.sqrt(((len(a_vals)-1)*np.std(a_vals, ddof=1)**2 + 
+                                      (len(b_vals)-1)*np.std(b_vals, ddof=1)**2) / 
+                                     (len(a_vals) + len(b_vals) - 2))
+                cohens_d = (np.mean(a_vals) - np.mean(b_vals)) / pooled_std if pooled_std > 0 else 0
+                
+                stats_results.append({
+                    'Tissue': tissue,
+                    'Mean A': np.mean(a_vals),
+                    'Mean B': np.mean(b_vals),
+                    'Diff (A-B)': np.mean(a_vals) - np.mean(b_vals),
+                    't-statistic': t_stat,
+                    'p-value (t-test)': t_pval,
+                    'p-value (Mann-Whitney)': u_pval,
+                    "Cohen's d": cohens_d
+                })
+            
+            stats_df = pd.DataFrame(stats_results)
+            
+            # Apply multiple testing correction (Benjamini-Hochberg)
+            from scipy.stats import false_discovery_control
+            try:
+                stats_df['FDR (t-test)'] = false_discovery_control(stats_df['p-value (t-test)'].values)
+            except:
+                # Fallback for older scipy versions
+                stats_df['FDR (t-test)'] = stats_df['p-value (t-test)'] * len(stats_df) / (
+                    stats_df['p-value (t-test)'].rank()
+                )
+            
+            # Sort by significance
+            stats_df = stats_df.sort_values('p-value (t-test)')
+            
+            # Display results
+            col_stats1, col_stats2 = st.columns([2, 1])
+            
+            with col_stats1:
+                # Volcano-style plot (difference vs -log10 p-value)
+                plot_df = stats_df.copy()
+                plot_df['-log10(p)'] = -np.log10(plot_df['p-value (t-test)'].clip(lower=1e-10))
+                plot_df['Significant'] = plot_df['FDR (t-test)'] < 0.05
+                
+                fig_volcano = px.scatter(
+                    plot_df,
+                    x='Diff (A-B)',
+                    y='-log10(p)',
+                    color='Significant',
+                    text='Tissue',
+                    title="Group Differences: Volcano Plot",
+                    color_discrete_map={True: '#e74c3c', False: '#95a5a6'}
+                )
+                fig_volcano.add_hline(y=-np.log10(0.05), line_dash="dash", 
+                                      annotation_text="p=0.05", line_color="gray")
+                fig_volcano.update_traces(textposition='top center', marker=dict(size=10))
+                fig_volcano.update_layout(
+                    height=400,
+                    xaxis_title="Mean Difference (Group A - Group B)",
+                    yaxis_title="-log₁₀(p-value)",
+                    margin=dict(l=10, r=10, t=40, b=10)
+                )
+                st.plotly_chart(fig_volcano, width='content')
+            
+            with col_stats2:
+                # Summary of significant findings
+                sig_tissues = stats_df[stats_df['FDR (t-test)'] < 0.05]
+                st.markdown("#### Significant Differences")
+                st.caption("FDR < 0.05")
+                if len(sig_tissues) > 0:
+                    for _, row in sig_tissues.iterrows():
+                        direction = "↑ in A" if row['Diff (A-B)'] > 0 else "↓ in A"
+                        cohens_d_val = row["Cohen's d"]
+                        st.write(f"**{row['Tissue']}**: {direction} (d={cohens_d_val:.2f})")
+                else:
+                    st.info("No tissues show significant differences at FDR < 0.05")
+            
+            # Full results table
+            with st.expander("Full Statistical Results", expanded=False):
+                display_df = stats_df.copy()
+                # Format numbers
+                for col in ['Mean A', 'Mean B', 'Diff (A-B)', 't-statistic', "Cohen's d"]:
+                    display_df[col] = display_df[col].round(4)
+                for col in ['p-value (t-test)', 'p-value (Mann-Whitney)', 'FDR (t-test)']:
+                    display_df[col] = display_df[col].apply(lambda x: f"{x:.2e}" if x < 0.001 else f"{x:.4f}")
+                
+                st.dataframe(display_df, hide_index=True, width=None)
+                
+                # Download button
+                csv_stats = stats_df.to_csv(index=False)
+                st.download_button(
+                    "📥 Download Statistics CSV",
+                    csv_stats,
+                    "group_comparison_stats.csv",
+                    "text/csv"
+                )
+            
+            # Box plots for top differences
+            st.markdown("### Tissue Probability Distributions by Group")
+            
+            # Get top 4 tissues by effect size
+            top_tissues = stats_df.nlargest(4, "Cohen's d", keep='first')['Tissue'].tolist()
+            
+            # Prepare data for box plots
+            box_data = []
+            for tissue in top_tissues:
+                for sample in group_a_samples:
+                    box_data.append({'Tissue': tissue, 'Group': 'A', 'Probability': prob_matrix.loc[sample, tissue]})
+                for sample in group_b_samples:
+                    box_data.append({'Tissue': tissue, 'Group': 'B', 'Probability': prob_matrix.loc[sample, tissue]})
+            box_df = pd.DataFrame(box_data)
+            
+            fig_boxes = px.box(
+                box_df,
+                x='Tissue',
+                y='Probability',
+                color='Group',
+                points='all',
+                title="Top 4 Tissues by Effect Size",
+                color_discrete_map={'A': '#3498db', 'B': '#e74c3c'}
+            )
+            fig_boxes.update_layout(height=400, margin=dict(l=10, r=10, t=40, b=10))
+            st.plotly_chart(fig_boxes, width='content')
+            
+            mark_says("Markverse/Markwithamassspec.png", 
+                      "Statistical differences revealed! Check those p-values carefully though!")
+        
+        elif len(group_a_samples) > 0 or len(group_b_samples) > 0:
+            st.info("Select at least 2 samples in each group to run statistical tests.")
+        else:
+            st.info("Assign samples to groups above to begin comparison.")
 
 # ==============================================================================
 # SECTION: Tissue-Specific Analysis
@@ -576,12 +774,29 @@ if show_downloads:
     st.markdown("---")
     st.markdown("## Download Results")
     
+    # Build summary dataframe for downloads
+    summary_data = []
+    for sample_id in sample_ids:
+        probs = prob_matrix.loc[sample_id]
+        top_tissue = probs.idxmax()
+        top_prob = probs.max()
+        second_tissue = probs.drop(top_tissue).idxmax()
+        second_prob = probs.drop(top_tissue).max()
+        summary_data.append({
+            'Sample': sample_id,
+            'Top Tissue': top_tissue,
+            'Top Probability': top_prob,
+            'Second Tissue': second_tissue,
+            'Second Probability': second_prob
+        })
+    download_summary_df = pd.DataFrame(summary_data)
+    
     col_dl1, col_dl2, col_dl3 = st.columns(3)
     
     with col_dl1:
         csv_prob = prob_matrix.to_csv()
         st.download_button(
-            label="Probability Matrix",
+            label="📊 Probability Matrix",
             data=csv_prob,
             file_name="mlmarker_probabilities.csv",
             mime="text/csv",
@@ -589,26 +804,110 @@ if show_downloads:
         )
     
     with col_dl2:
-        if 'summary_df' in dir():
-            csv_summary = summary_df.to_csv(index=False)
-            st.download_button(
-                label="Summary Table",
-                data=csv_summary,
-                file_name="mlmarker_summary.csv",
-                mime="text/csv",
-                width='content'
-            )
+        csv_summary = download_summary_df.to_csv(index=False)
+        st.download_button(
+            label="📋 Summary Table",
+            data=csv_summary,
+            file_name="mlmarker_summary.csv",
+            mime="text/csv",
+            width='content'
+        )
     
     with col_dl3:
-        if 'pro_con_df' in dir() and 'selected_tissue' in dir():
-            csv_procon = pro_con_df.to_csv(index=False)
-            st.download_button(
-                label=f"Pro/Con ({selected_tissue})",
-                data=csv_procon,
-                file_name=f"mlmarker_procon_{selected_tissue}.csv",
-                mime="text/csv",
-                width='content'
-            )
+        # Generate comprehensive report as HTML
+        html_report = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>MLMarker Analysis Report</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                h1 {{ color: #2c3e50; }}
+                h2 {{ color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
+                table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+                th {{ background-color: #3498db; color: white; }}
+                tr:nth-child(even) {{ background-color: #f2f2f2; }}
+                .metric {{ display: inline-block; margin: 10px 20px; padding: 15px; background: #ecf0f1; border-radius: 8px; }}
+                .metric-value {{ font-size: 24px; font-weight: bold; color: #2c3e50; }}
+                .metric-label {{ font-size: 14px; color: #7f8c8d; }}
+            </style>
+        </head>
+        <body>
+            <h1>🐙 MLMarker Analysis Report</h1>
+            <p>Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            
+            <h2>Summary Statistics</h2>
+            <div class="metric">
+                <div class="metric-value">{len(sample_ids)}</div>
+                <div class="metric-label">Samples Analyzed</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">{download_summary_df['Top Tissue'].nunique()}</div>
+                <div class="metric-label">Unique Tissues Predicted</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">{download_summary_df['Top Probability'].mean():.1%}</div>
+                <div class="metric-label">Average Top Probability</div>
+            </div>
+            
+            <h2>Sample Predictions</h2>
+            {download_summary_df.to_html(index=False, classes='dataframe')}
+            
+            <h2>Tissue Distribution</h2>
+            <table>
+                <tr><th>Tissue</th><th>Sample Count</th><th>Percentage</th></tr>
+                {''.join(f"<tr><td>{tissue}</td><td>{count}</td><td>{count/len(sample_ids)*100:.1f}%</td></tr>" for tissue, count in download_summary_df['Top Tissue'].value_counts().items())}
+            </table>
+            
+            <h2>Full Probability Matrix</h2>
+            {prob_matrix.round(4).to_html(classes='dataframe')}
+            
+            <hr>
+            <p><i>Report generated by MLMarker Streamlit App</i></p>
+        </body>
+        </html>
+        """
+        st.download_button(
+            label="📄 HTML Report",
+            data=html_report,
+            file_name="mlmarker_report.html",
+            mime="text/html",
+            width='content'
+        )
+    
+    # ZIP export with all data
+    st.markdown("### Complete Export")
+    
+    import io
+    import zipfile
+    
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Add probability matrix
+        zf.writestr('probabilities.csv', prob_matrix.to_csv())
+        
+        # Add summary
+        zf.writestr('summary.csv', download_summary_df.to_csv(index=False))
+        
+        # Add HTML report
+        zf.writestr('report.html', html_report)
+        
+        # Add individual sample SHAP values
+        for sample_id, result in results.items():
+            safe_name = sample_id.replace('/', '_').replace('\\', '_')
+            zf.writestr(f'shap_values/{safe_name}_shap.csv', result['prediction_df'].to_csv())
+    
+    zip_buffer.seek(0)
+    
+    st.download_button(
+        label="📦 Download All Results (ZIP)",
+        data=zip_buffer.getvalue(),
+        file_name="mlmarker_complete_results.zip",
+        mime="application/zip",
+        type="primary"
+    )
 
 mark_says("Markverse/markgraduation.png", 
           "Thanks for using MLMarker! Don't forget to cite us in your publications.")
