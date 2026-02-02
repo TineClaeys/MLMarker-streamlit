@@ -20,7 +20,20 @@ from mlmarker.model import MLMarker
 import io
 import streamlit.components.v1 as components
 import base64
-from custom_functions import mark_says, HELP_CONTENT, show_help, render_theme_toggle, get_theme_colors, apply_theme_to_figure, inject_keyboard_shortcuts, render_keyboard_shortcuts_help
+
+# Import custom functions with fallbacks for missing functions
+from custom_functions import mark_says
+try:
+    from custom_functions import HELP_CONTENT, show_help, render_theme_toggle, get_theme_colors, apply_theme_to_figure, inject_keyboard_shortcuts, render_keyboard_shortcuts_help
+except ImportError:
+    # Fallback definitions if custom_functions hasn't been updated
+    HELP_CONTENT = {}
+    def show_help(topic, title=None): pass
+    def render_theme_toggle(): pass
+    def get_theme_colors(): return {'template': 'plotly_white'}
+    def apply_theme_to_figure(fig, colors=None): return fig
+    def inject_keyboard_shortcuts(): pass
+    def render_keyboard_shortcuts_help(): pass
 
 
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')

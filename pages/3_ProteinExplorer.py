@@ -2,7 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from custom_functions import mark_says, render_sample_selector, get_sample_data, copy_to_clipboard_button, show_help
+import streamlit.components.v1 as components
+
+# Import custom functions with fallbacks
+from custom_functions import mark_says, render_sample_selector, get_sample_data
+try:
+    from custom_functions import copy_to_clipboard_button, show_help
+except ImportError:
+    def copy_to_clipboard_button(text, label="Copy", key=None): pass
+    def show_help(topic, title=None): pass
 
 st.set_page_config(page_title="Protein Explorer - MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
