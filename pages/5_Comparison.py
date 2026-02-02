@@ -58,7 +58,7 @@ with st.sidebar:
     st.markdown("### Analysis Options")
     
     show_heatmap = st.checkbox("Tissue Probability Heatmap", value=True)
-    show_pca = st.checkbox("SHAP Profile PCA", value=False)
+    show_pca = st.checkbox("PCA Analysis", value=False)
     show_tissue_analysis = st.checkbox("Tissue-Specific Analysis", value=False)
     show_sample_comparison = st.checkbox("Sample Comparison", value=False)
     show_summary = st.checkbox("Top Tissue Summary", value=False)
@@ -119,112 +119,171 @@ if show_heatmap:
     st.plotly_chart(fig_heatmap, use_container_width=True)
 
 # ==============================================================================
-# SECTION: PCA based on SHAP Profiles
+# SECTION: PCA Analysis
 # ==============================================================================
 if show_pca:
     st.markdown("---")
-    st.markdown("## SHAP Profile Clustering")
-    st.caption("Samples clustered by which proteins drive their tissue predictions")
+    st.markdown("## PCA Analysis")
+    st.caption("Cluster samples based on different data types")
     
-    # Build SHAP feature matrix per tissue or overall
-    pca_mode = st.radio(
-        "Cluster samples by:",
-        ["Overall SHAP profile", "Tissue-specific SHAP profile"],
-        horizontal=True,
-        key="pca_mode"
+    # Get MLMarker features
+    from mlmarker.model import MLMarker
+    mlmarker_model = MLMarker()
+    mlmarker_features = set(mlmarker_model.get_model_features())
+    
+    # Get raw abundance data
+    if "df" not in st.session_state:
+        st.warning("No abundance data available. Upload data on Home page first.")
+        abundance_df = None
+    else:
+        abundance_df = st.session_state["df"]
+    
+    # PCA mode selection with clear descriptions
+    pca_options = {
+        "All Proteins (Abundances)": "PCA on all protein abundances in your dataset",
+        "MLMarker Features (Abundances)": "PCA on abundances of the 3,427 MLMarker model proteins",
+        "Overall SHAP Profile": "PCA on mean |SHAP| values across all tissues",
+        "Tissue-Specific SHAP": "PCA on SHAP values for a specific tissue"
+    }
+    
+    pca_mode = st.selectbox(
+        "Select PCA type",
+        list(pca_options.keys()),
+        key="pca_mode",
+        help="Choose what data to use for clustering samples"
     )
+    st.caption(pca_options[pca_mode])
     
-    if pca_mode == "Tissue-specific SHAP profile":
-        pca_tissue = st.selectbox("Select tissue for PCA", all_tissues, key="pca_tissue")
+    # Additional options based on mode
+    pca_tissue = None
+    if pca_mode == "Tissue-Specific SHAP":
+        pca_tissue = st.selectbox("Select tissue", all_tissues, key="pca_tissue")
     
-    # Build the SHAP matrix
-    shap_data = {}
-    for sample_id, result in results.items():
-        pred_df = result['prediction_df']
-        if pca_mode == "Overall SHAP profile":
-            # Use mean absolute SHAP across all tissues for each protein
-            shap_data[sample_id] = pred_df.abs().mean(axis=0)
+    # Build the data matrix based on selection
+    pca_matrix = None
+    pca_title = ""
+    
+    if pca_mode == "All Proteins (Abundances)":
+        if abundance_df is not None:
+            # Filter to samples in batch results
+            pca_matrix = abundance_df.loc[sample_ids].fillna(0)
+            pca_title = "All Protein Abundances"
         else:
-            # Use SHAP values for specific tissue
+            st.error("No abundance data available.")
+    
+    elif pca_mode == "MLMarker Features (Abundances)":
+        if abundance_df is not None:
+            # Get MLMarker features that exist in the data
+            available_features = [f for f in mlmarker_features if f in abundance_df.columns]
+            if len(available_features) > 0:
+                pca_matrix = abundance_df.loc[sample_ids, available_features].fillna(0)
+                pca_title = f"MLMarker Features ({len(available_features)} proteins)"
+            else:
+                st.error("No MLMarker features found in your data.")
+        else:
+            st.error("No abundance data available.")
+    
+    elif pca_mode == "Overall SHAP Profile":
+        shap_data = {}
+        for sample_id, result in results.items():
+            pred_df = result['prediction_df']
+            # Mean absolute SHAP across all tissues for each protein
+            shap_data[sample_id] = pred_df.abs().mean(axis=0)
+        pca_matrix = pd.DataFrame(shap_data).T.fillna(0)
+        pca_title = "Overall SHAP Profile"
+    
+    elif pca_mode == "Tissue-Specific SHAP":
+        shap_data = {}
+        for sample_id, result in results.items():
+            pred_df = result['prediction_df']
             if pca_tissue in pred_df.index:
                 shap_data[sample_id] = pred_df.loc[pca_tissue]
             else:
                 shap_data[sample_id] = pd.Series(0, index=pred_df.columns)
+        pca_matrix = pd.DataFrame(shap_data).T.fillna(0)
+        pca_title = f"{pca_tissue} SHAP Profile"
     
-    shap_matrix = pd.DataFrame(shap_data).T.fillna(0)
-    
-    # Only proceed if we have enough samples
-    if len(shap_matrix) >= 3:
-        # Standardize and run PCA
-        scaler = StandardScaler()
-        shap_scaled = scaler.fit_transform(shap_matrix)
+    # Run PCA if we have data
+    if pca_matrix is not None and len(pca_matrix) >= 3:
+        # Remove zero-variance columns
+        pca_matrix = pca_matrix.loc[:, pca_matrix.var() > 0]
         
-        n_components = min(3, len(shap_matrix) - 1, len(shap_matrix.columns))
-        pca = PCA(n_components=n_components)
-        pca_result = pca.fit_transform(shap_scaled)
-        
-        # Create PCA dataframe
-        pca_df = pd.DataFrame(
-            pca_result[:, :min(2, n_components)],
-            columns=['PC1', 'PC2'] if n_components >= 2 else ['PC1'],
-            index=shap_matrix.index
-        )
-        pca_df['Sample'] = pca_df.index
-        pca_df['Top Tissue'] = [prob_matrix.loc[s].idxmax() for s in pca_df.index]
-        
-        col_pca1, col_pca2 = st.columns([2, 1])
-        
-        with col_pca1:
-            if n_components >= 2:
-                fig_pca = px.scatter(
-                    pca_df,
-                    x='PC1',
-                    y='PC2',
-                    color='Top Tissue',
-                    text='Sample',
-                    title=f"Sample Clustering by {'Overall' if pca_mode == 'Overall SHAP profile' else pca_tissue} SHAP Profile"
-                )
-                fig_pca.update_traces(textposition='top center', marker=dict(size=12))
-                fig_pca.update_layout(
-                    height=450,
-                    xaxis_title=f"PC1 ({pca.explained_variance_ratio_[0]:.1%} variance)",
-                    yaxis_title=f"PC2 ({pca.explained_variance_ratio_[1]:.1%} variance)",
-                    margin=dict(l=10, r=10, t=40, b=10)
-                )
-                st.plotly_chart(fig_pca, use_container_width=True)
-            else:
-                st.info("Need more features for 2D PCA visualization.")
-        
-        with col_pca2:
-            st.markdown("#### Variance Explained")
-            var_df = pd.DataFrame({
-                'Component': [f'PC{i+1}' for i in range(len(pca.explained_variance_ratio_))],
-                'Variance': pca.explained_variance_ratio_
-            })
-            fig_var = px.bar(
-                var_df, x='Component', y='Variance',
-                title="PCA Variance"
-            )
-            fig_var.update_layout(height=250, margin=dict(l=10, r=10, t=40, b=10))
-            st.plotly_chart(fig_var, use_container_width=True)
+        if len(pca_matrix.columns) < 2:
+            st.warning("Not enough variable features for PCA.")
+        else:
+            # Standardize and run PCA
+            scaler = StandardScaler()
+            data_scaled = scaler.fit_transform(pca_matrix)
             
-            # Show top contributing proteins
-            st.markdown("#### Top Contributing Proteins")
-            loadings = pd.DataFrame(
-                pca.components_.T,
-                columns=[f'PC{i+1}' for i in range(n_components)],
-                index=shap_matrix.columns
+            n_components = min(3, len(pca_matrix) - 1, len(pca_matrix.columns))
+            pca = PCA(n_components=n_components)
+            pca_result = pca.fit_transform(data_scaled)
+            
+            # Create PCA dataframe
+            pca_df = pd.DataFrame(
+                pca_result[:, :min(2, n_components)],
+                columns=['PC1', 'PC2'] if n_components >= 2 else ['PC1'],
+                index=pca_matrix.index
             )
-            top_pc1 = loadings['PC1'].abs().nlargest(5)
-            st.dataframe(
-                pd.DataFrame({'Protein': top_pc1.index, 'Loading': top_pc1.values}),
-                hide_index=True,
-                use_container_width=True
-            )
-        
-        mark_says("Markverse/cropped_images/Coding Mark.png", 
-                  "Samples close together in PCA have similar protein expression patterns!")
-    else:
+            pca_df['Sample'] = pca_df.index
+            pca_df['Top Tissue'] = [prob_matrix.loc[s].idxmax() for s in pca_df.index]
+            
+            col_pca1, col_pca2 = st.columns([2, 1])
+            
+            with col_pca1:
+                if n_components >= 2:
+                    fig_pca = px.scatter(
+                        pca_df,
+                        x='PC1',
+                        y='PC2',
+                        color='Top Tissue',
+                        text='Sample',
+                        title=f"Sample Clustering: {pca_title}"
+                    )
+                    fig_pca.update_traces(textposition='top center', marker=dict(size=12))
+                    fig_pca.update_layout(
+                        height=450,
+                        xaxis_title=f"PC1 ({pca.explained_variance_ratio_[0]:.1%} variance)",
+                        yaxis_title=f"PC2 ({pca.explained_variance_ratio_[1]:.1%} variance)",
+                        margin=dict(l=10, r=10, t=40, b=10)
+                    )
+                    st.plotly_chart(fig_pca, use_container_width=True)
+                else:
+                    st.info("Need more features for 2D PCA visualization.")
+            
+            with col_pca2:
+                st.markdown("#### Variance Explained")
+                var_df = pd.DataFrame({
+                    'Component': [f'PC{i+1}' for i in range(len(pca.explained_variance_ratio_))],
+                    'Variance': pca.explained_variance_ratio_
+                })
+                fig_var = px.bar(
+                    var_df, x='Component', y='Variance',
+                    title="PCA Variance"
+                )
+                fig_var.update_layout(height=200, margin=dict(l=10, r=10, t=40, b=10))
+                st.plotly_chart(fig_var, use_container_width=True)
+                
+                # Show top contributing proteins/features
+                st.markdown("#### Top Contributing Features")
+                loadings = pd.DataFrame(
+                    pca.components_.T,
+                    columns=[f'PC{i+1}' for i in range(n_components)],
+                    index=pca_matrix.columns
+                )
+                top_pc1 = loadings['PC1'].abs().nlargest(5)
+                st.dataframe(
+                    pd.DataFrame({'Feature': top_pc1.index, '|Loading|': top_pc1.values.round(4)}),
+                    hide_index=True,
+                    use_container_width=True
+                )
+            
+            # Info about the analysis
+            st.info(f"**{pca_title}**: {len(pca_matrix.columns):,} features used for clustering {len(pca_matrix)} samples.")
+            
+            mark_says("Markverse/cropped_images/Coding Mark.png", 
+                      "Samples close together have similar profiles!")
+    elif pca_matrix is not None:
         st.info("Need at least 3 samples for PCA clustering.")
 
 # ==============================================================================
@@ -396,9 +455,10 @@ if show_sample_comparison:
 # ==============================================================================
 if show_summary:
     st.markdown("---")
-    st.markdown("## Top Tissue Summary")
-    st.caption("Highest-probability tissue predictions per sample")
+    st.markdown("## Prediction Summary")
+    st.caption("Overview of tissue predictions across all samples")
     
+    # Build summary data
     summary_data = []
     for sample_id in sample_ids:
         probs = prob_matrix.loc[sample_id]
@@ -406,39 +466,115 @@ if show_summary:
         top_prob = probs.max()
         second_tissue = probs.drop(top_tissue).idxmax()
         second_prob = probs.drop(top_tissue).max()
+        
+        # Confidence assessment
+        gap = top_prob - second_prob
+        if gap > 0.3:
+            confidence = "High"
+            conf_color = "🟢"
+        elif gap > 0.1:
+            confidence = "Medium"
+            conf_color = "🟡"
+        else:
+            confidence = "Low"
+            conf_color = "🔴"
+        
         summary_data.append({
             'Sample': sample_id,
-            'Top Tissue': top_tissue,
-            'Probability': top_prob,
-            '2nd Tissue': second_tissue,
-            '2nd Prob': second_prob,
-            'Gap': top_prob - second_prob
+            'Predicted Tissue': top_tissue,
+            'Confidence': f"{conf_color} {confidence}",
+            'Score': top_prob,
+            'Runner-up': second_tissue,
+            'Runner-up Score': second_prob,
+            'Margin': gap
         })
     
     summary_df = pd.DataFrame(summary_data)
     
-    col_table, col_pie = st.columns([2, 1])
+    # Top row: Key metrics
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    
+    n_unique_tissues = summary_df['Predicted Tissue'].nunique()
+    n_high_conf = sum(1 for d in summary_data if "High" in d['Confidence'])
+    avg_score = summary_df['Score'].mean()
+    
+    col_m1.metric("Samples Analyzed", len(sample_ids))
+    col_m2.metric("Unique Tissues", n_unique_tissues)
+    col_m3.metric("High Confidence", f"{n_high_conf}/{len(sample_ids)}")
+    col_m4.metric("Avg Top Score", f"{avg_score:.1%}")
+    
+    st.markdown("")
+    
+    # Main content
+    col_table, col_viz = st.columns([3, 2])
     
     with col_table:
+        st.markdown("#### Sample Predictions")
+        
+        # Format for display
+        display_df = summary_df.copy()
+        display_df['Score'] = display_df['Score'].apply(lambda x: f"{x:.1%}")
+        display_df['Runner-up Score'] = display_df['Runner-up Score'].apply(lambda x: f"{x:.1%}")
+        display_df['Margin'] = display_df['Margin'].apply(lambda x: f"{x:.1%}")
+        
         st.dataframe(
-            summary_df.style.format({
-                'Probability': '{:.1%}',
-                '2nd Prob': '{:.1%}',
-                'Gap': '{:.1%}'
-            }).background_gradient(subset=['Probability', 'Gap'], cmap='RdYlGn'),
+            display_df,
             use_container_width=True,
-            height=min(400, 35 * len(sample_ids) + 40)
+            height=min(400, 35 * len(sample_ids) + 40),
+            hide_index=True
         )
     
-    with col_pie:
-        tissue_counts = summary_df['Top Tissue'].value_counts()
+    with col_viz:
+        st.markdown("#### Tissue Distribution")
+        
+        # Pie chart of predicted tissues
+        tissue_counts = summary_df['Predicted Tissue'].value_counts()
         fig_pie = px.pie(
             values=tissue_counts.values,
             names=tissue_counts.index,
-            title="Tissue Distribution"
+            hole=0.4  # Donut chart
         )
-        fig_pie.update_layout(height=350, margin=dict(l=10, r=10, t=40, b=10))
+        fig_pie.update_layout(
+            height=250, 
+            margin=dict(l=10, r=10, t=10, b=10),
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.3)
+        )
+        fig_pie.update_traces(textposition='inside', textinfo='value+label')
         st.plotly_chart(fig_pie, use_container_width=True)
+        
+        st.markdown("#### Confidence Distribution")
+        
+        # Confidence bar chart
+        conf_counts = pd.Series([d['Confidence'].split()[1] for d in summary_data]).value_counts()
+        conf_order = ['High', 'Medium', 'Low']
+        conf_colors = {'High': '#27ae60', 'Medium': '#f39c12', 'Low': '#e74c3c'}
+        
+        fig_conf = go.Figure()
+        for conf in conf_order:
+            count = conf_counts.get(conf, 0)
+            fig_conf.add_trace(go.Bar(
+                x=[conf], y=[count],
+                name=conf,
+                marker_color=conf_colors[conf],
+                text=[count],
+                textposition='auto'
+            ))
+        fig_conf.update_layout(
+            height=200,
+            margin=dict(l=10, r=10, t=10, b=10),
+            showlegend=False,
+            xaxis_title="",
+            yaxis_title="Samples"
+        )
+        st.plotly_chart(fig_conf, use_container_width=True)
+    
+    # Expandable: samples grouped by tissue
+    with st.expander("View Samples by Predicted Tissue", expanded=False):
+        for tissue in sorted(summary_df['Predicted Tissue'].unique()):
+            tissue_samples = summary_df[summary_df['Predicted Tissue'] == tissue]['Sample'].tolist()
+            st.markdown(f"**{tissue}** ({len(tissue_samples)} samples)")
+            st.caption(", ".join(tissue_samples))
 
 # ==============================================================================
 # SECTION: Download Results
