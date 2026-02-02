@@ -187,7 +187,7 @@ if show_stats and len(shap_data) > 0:
     )
     fig.add_vline(x=0, line_dash="dash", line_color="gray")
     fig.update_layout(height=300, margin=dict(t=40, b=20))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 # --- Navigation hint ---

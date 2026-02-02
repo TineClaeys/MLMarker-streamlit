@@ -136,7 +136,7 @@ if show_pre_pred:
                 xaxis_title="Coverage (%)",
                 yaxis_title="Number of Samples"
             )
-            st.plotly_chart(fig_hist, use_container_width=True)
+            st.plotly_chart(fig_hist, width='stretch')
         
         with col_cov2:
             fig_bar = px.bar(
@@ -150,7 +150,7 @@ if show_pre_pred:
                 margin=dict(t=40, b=20),
                 showlegend=False
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width='stretch')
         
         # Warn about low coverage
         low_cov = coverage_df[coverage_df['Coverage (%)'] < 5]
@@ -188,7 +188,7 @@ if show_intensity_analysis:
             color_discrete_sequence=['#3498db', '#95a5a6']
         )
         fig_pie.update_layout(height=300, margin=dict(t=40, b=20))
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width='stretch')
     else:
         # Multiple samples - show distributions
         col_int1, col_int2 = st.columns(2)
@@ -201,7 +201,7 @@ if show_intensity_analysis:
                 hover_data=['Sample']
             )
             fig_total.update_layout(height=350, margin=dict(t=40, b=20))
-            st.plotly_chart(fig_total, use_container_width=True)
+            st.plotly_chart(fig_total, width='stretch')
         
         with col_int2:
             # MLMarker proportion
@@ -211,7 +211,7 @@ if show_intensity_analysis:
                 hover_data=['Sample']
             )
             fig_prop.update_layout(height=350, margin=dict(t=40, b=20))
-            st.plotly_chart(fig_prop, use_container_width=True)
+            st.plotly_chart(fig_prop, width='stretch')
         
         # Stats
         st.markdown(f"""
@@ -235,56 +235,96 @@ if show_feature_correlation:
     than being specific to MLMarker's feature space.
     """)
     
-    # Scatter plot
-    fig_scatter = px.scatter(
-        coverage_df,
-        x='Non-MLMarker Intensity', y='MLMarker Intensity',
-        hover_data=['Sample', 'Coverage (%)'],
-        title="MLMarker vs Non-MLMarker Intensity (per sample)"
-    )
-    
-    # Add regression line and correlation
-    if len(coverage_df) > 2:
-        x_vals = coverage_df['Non-MLMarker Intensity']
-        y_vals = coverage_df['MLMarker Intensity']
-        if x_vals.nunique() > 1 and y_vals.nunique() > 1:
-            try:
-                slope, intercept, r, p, _ = stats.linregress(x_vals, y_vals)
-                x_line = np.linspace(x_vals.min(), x_vals.max(), 50)
-                fig_scatter.add_trace(go.Scatter(
-                    x=x_line, y=slope * x_line + intercept,
-                    mode='lines', name=f'r={r:.2f}, p={p:.2e}',
-                    line=dict(dash='dash', color='gray')
-                ))
-                
-                fig_scatter.update_layout(
-                    height=450, 
-                    margin=dict(t=40, b=20),
-                    xaxis_title="Non-MLMarker Intensity (sum)",
-                    yaxis_title="MLMarker Intensity (sum)"
-                )
-                st.plotly_chart(fig_scatter, use_container_width=True)
-                
-                # Interpretation
-                if r > 0.9:
-                    st.success(f"""
-                    **Strong correlation (r = {r:.2f})**: Intensity variation is a global sample-level effect. 
-                    This suggests MLMarker predictions are **not driven by intensity artifacts**.
-                    """)
-                    mark_says("Markverse/cropped_images/Mark digging for gold.png", 
-                              f"Excellent! r = {r:.2f} shows intensity is a global effect, not MLMarker-specific.")
-                elif r > 0.7:
-                    st.info(f"""
-                    **Good correlation (r = {r:.2f})**: Most intensity variation appears to be global. 
-                    Predictions are likely reliable.
-                    """)
-                else:
-                    st.warning(f"""
-                    **Moderate correlation (r = {r:.2f})**: Some intensity variation may be feature-specific. 
-                    Interpret predictions with caution.
-                    """)
-            except:
-                st.plotly_chart(fig_scatter, use_container_width=True)
+    if n_samples == 1:
+        # Single sample - show proportion comparison
+        st.info("Correlation analysis requires multiple samples. Showing intensity breakdown for your sample.")
+        
+        mlm_int = coverage_df['MLMarker Intensity'].iloc[0]
+        nonmlm_int = coverage_df['Non-MLMarker Intensity'].iloc[0]
+        total = mlm_int + nonmlm_int
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            # Pie chart of intensity breakdown
+            fig_pie = go.Figure(data=[go.Pie(
+                labels=['MLMarker Features', 'Non-MLMarker Features'],
+                values=[mlm_int, nonmlm_int],
+                hole=0.4,
+                marker_colors=['#636EFA', '#EF553B']
+            )])
+            fig_pie.update_layout(
+                title="Intensity Distribution",
+                height=350,
+                margin=dict(t=40, b=20)
+            )
+            st.plotly_chart(fig_pie, width='stretch')
+        
+        with col2:
+            st.markdown("### Intensity Summary")
+            st.metric("MLMarker Features", f"{mlm_int:,.0f}", f"{100*mlm_int/total:.1f}% of total")
+            st.metric("Non-MLMarker Features", f"{nonmlm_int:,.0f}", f"{100*nonmlm_int/total:.1f}% of total")
+            st.caption("Add more samples to assess correlation between MLMarker and non-MLMarker intensities.")
+    else:
+        # Multiple samples - show scatter with correlation
+        fig_scatter = px.scatter(
+            coverage_df,
+            x='Non-MLMarker Intensity', y='MLMarker Intensity',
+            hover_data=['Sample', 'Coverage (%)'],
+            title="MLMarker vs Non-MLMarker Intensity (per sample)"
+        )
+        
+        # Add regression line and correlation
+        if len(coverage_df) > 2:
+            x_vals = coverage_df['Non-MLMarker Intensity']
+            y_vals = coverage_df['MLMarker Intensity']
+            if x_vals.nunique() > 1 and y_vals.nunique() > 1:
+                try:
+                    slope, intercept, r, p, _ = stats.linregress(x_vals, y_vals)
+                    x_line = np.linspace(x_vals.min(), x_vals.max(), 50)
+                    fig_scatter.add_trace(go.Scatter(
+                        x=x_line, y=slope * x_line + intercept,
+                        mode='lines', name=f'r={r:.2f}, p={p:.2e}',
+                        line=dict(dash='dash', color='gray')
+                    ))
+                    
+                    fig_scatter.update_layout(
+                        height=450, 
+                        margin=dict(t=40, b=20),
+                        xaxis_title="Non-MLMarker Intensity (sum)",
+                        yaxis_title="MLMarker Intensity (sum)"
+                    )
+                    st.plotly_chart(fig_scatter, width='stretch')
+                    
+                    # Interpretation
+                    if r > 0.9:
+                        st.success(f"""
+                        **Strong correlation (r = {r:.2f})**: Intensity variation is a global sample-level effect. 
+                        This suggests MLMarker predictions are **not driven by intensity artifacts**.
+                        """)
+                        mark_says("Markverse/cropped_images/Mark digging for gold.png", 
+                                  f"Excellent! r = {r:.2f} shows intensity is a global effect, not MLMarker-specific.")
+                    elif r > 0.7:
+                        st.info(f"""
+                        **Good correlation (r = {r:.2f})**: Most intensity variation appears to be global. 
+                        Predictions are likely reliable.
+                        """)
+                    else:
+                        st.warning(f"""
+                        **Moderate correlation (r = {r:.2f})**: Some intensity variation may be feature-specific. 
+                        Interpret predictions with caution.
+                        """)
+                except:
+                    st.plotly_chart(fig_scatter, width='stretch')
+        else:
+            # 2 samples - show scatter without regression
+            fig_scatter.update_layout(
+                height=450, 
+                margin=dict(t=40, b=20),
+                xaxis_title="Non-MLMarker Intensity (sum)",
+                yaxis_title="MLMarker Intensity (sum)"
+            )
+            st.plotly_chart(fig_scatter, width='stretch')
+            st.info("Add more samples (≥3) to compute correlation statistics.")
 
 # ==============================================================================
 # SECTION: Post-Prediction QC
@@ -300,7 +340,46 @@ if show_post_pred:
     - Intensity correlation with prediction should be a **global effect**
     """)
     
-    if "batch_results" not in st.session_state or not st.session_state.batch_results:
+    # Check for single sample vs batch results
+    has_batch_results = "batch_results" in st.session_state and st.session_state.batch_results
+    has_single_result = "prediction_summed" in st.session_state and st.session_state.prediction_summed is not None
+    
+    if n_samples == 1:
+        # Single sample mode
+        if has_single_result:
+            pred = st.session_state.prediction_summed
+            top_tissue = pred.idxmax()
+            top_prob = pred.max()
+            
+            st.info(f"Single sample predicted as **{top_tissue}** (probability: {top_prob:.1%})")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### Sample QC Summary")
+                st.metric("Predicted Tissue", top_tissue)
+                st.metric("Confidence", f"{top_prob:.1%}")
+                st.metric("Feature Coverage", f"{coverage_df['Coverage (%)'].iloc[0]:.1f}%")
+                st.metric("MLMarker Proportion", f"{coverage_df['MLMarker Proportion (%)'].iloc[0]:.1f}%")
+            
+            with col2:
+                st.markdown("### Interpretation")
+                coverage_val = coverage_df['Coverage (%)'].iloc[0]
+                mlm_prop = coverage_df['MLMarker Proportion (%)'].iloc[0]
+                
+                if coverage_val >= 50 and top_prob >= 0.7:
+                    st.success("Good coverage and high confidence prediction.")
+                elif coverage_val < 30:
+                    st.warning("Low feature coverage. Prediction may be less reliable.")
+                elif top_prob < 0.5:
+                    st.warning("Low prediction confidence. Consider the tissue alternatives.")
+                else:
+                    st.info("Moderate QC metrics. Prediction appears reasonable.")
+            
+            st.caption("Add more samples to enable group comparison and statistical tests.")
+        else:
+            st.info("Run MLMarker prediction on the **Home** page to see Post-Prediction QC.")
+    
+    elif not has_batch_results:
         st.info("Run MLMarker predictions on the **Home** page to see Post-Prediction QC.")
     else:
         results = st.session_state.batch_results
@@ -337,7 +416,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_int.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_int, use_container_width=True)
+                    st.plotly_chart(fig_int, width='stretch')
                 
                 with col_post2:
                     fig_mlm = px.box(
@@ -346,7 +425,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_mlm.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_mlm, use_container_width=True)
+                    st.plotly_chart(fig_mlm, width='stretch')
                 
                 col_post3, col_post4 = st.columns(2)
                 
@@ -357,7 +436,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_cov.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_cov, use_container_width=True)
+                    st.plotly_chart(fig_cov, width='stretch')
                 
                 with col_post4:
                     fig_prop = px.box(
@@ -366,7 +445,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_prop.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_prop, use_container_width=True)
+                    st.plotly_chart(fig_prop, width='stretch')
                 
                 # Statistical tests if we have enough samples
                 if len(unique_tissues) == 2 and all(qc_data.groupby('Top Tissue').size() >= 3):
@@ -388,7 +467,7 @@ if show_post_pred:
                         })
                     
                     test_df = pd.DataFrame(test_results)
-                    st.dataframe(test_df, use_container_width=True, hide_index=True)
+                    st.dataframe(test_df, width='stretch', hide_index=True)
                     
                     # Interpretation
                     sig_count = sum(1 for r in test_results if r['Significant'] == 'Yes')
@@ -438,7 +517,7 @@ if show_post_pred:
                             pass
                 
                 fig_global.update_layout(height=400, margin=dict(t=40, b=20))
-                st.plotly_chart(fig_global, use_container_width=True)
+                st.plotly_chart(fig_global, width='stretch')
                 
                 st.markdown("""
                 **Interpretation**: If both predicted groups fall along the same regression line, 
@@ -453,7 +532,7 @@ st.download_button(
     coverage_df.to_csv(index=False),
     "mlmarker_qc_metrics.csv",
     "text/csv",
-    use_container_width=True
+    width='stretch'
 )
 
 mark_says("Markverse/cropped_images/octopus.png", 

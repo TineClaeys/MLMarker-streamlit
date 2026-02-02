@@ -52,7 +52,7 @@ with st.sidebar:
         prediction_df.to_csv(),
         f"prediction_{current_sample}.csv",
         "text/csv",
-        use_container_width=True
+        width='stretch'
     )
     
     st.markdown("---")
@@ -152,7 +152,7 @@ if show_overview:
     
     with col1:
         fig = visualise_tissue_overview(prediction_df)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         st.markdown("### Top Predictions")
@@ -182,7 +182,7 @@ if show_tissue_detail:
         fig, pro_proteins, con_proteins = visualise_tissue_forceplot(
             prediction_df, selected_tissue, top_n
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # Helper function to format protein with name
         def format_protein_list(proteins):
@@ -225,7 +225,7 @@ if show_scatter:
     if tissue_a != tissue_b:
         if st.button("Compare Tissues", key="btn_scatter"):
             fig = scatterplot_tissues(prediction_df, tissue_a, tissue_b)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             mark_says("Markverse/cropped_images/Coding Mark.png", 
                       "Proteins in opposite quadrants have tissue-specific roles!")
     else:

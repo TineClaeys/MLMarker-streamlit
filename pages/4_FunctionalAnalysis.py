@@ -110,7 +110,7 @@ with col_pval:
     p_threshold = st.selectbox("P-value threshold", [0.001, 0.01, 0.05], index=1, key="pval")
 
 with col_run:
-    run_button = st.button("Run Over-Representation Analysis", type="primary", use_container_width=True)
+    run_button = st.button("Run Over-Representation Analysis", type="primary", width='stretch')
 
 if run_button:
     if len(selected_proteins) < 3:
@@ -161,7 +161,7 @@ if 'ora_results' in st.session_state and not st.session_state['ora_results'].emp
         display_df.columns = ['Source', 'Term', 'P-value', 'Hits', 'Term Size']
         display_df['P-value'] = display_df['P-value'].apply(lambda x: f"{x:.2e}")
         
-        st.dataframe(display_df, use_container_width=True, height=400)
+        st.dataframe(display_df, width='stretch', height=400)
         
         # Download
         st.download_button(
@@ -206,7 +206,7 @@ if 'ora_results' in st.session_state and not st.session_state['ora_results'].emp
                         xaxis_title='-log10(p-value)',
                         yaxis_title=''
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
 elif 'ora_results' not in st.session_state:
     st.info("Click **Run Over-Representation Analysis** to analyze your proteins.")
