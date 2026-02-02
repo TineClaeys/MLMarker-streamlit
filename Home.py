@@ -331,11 +331,6 @@ if uploaded_file is not None:
                     '_low_cov': is_low_cov  # hidden flag
                 })
             st.session_state.sample_table = table_data
-            st.session_state.changes_applied = True  # Initially ready to run
-        
-        # Track if changes need to be applied
-        if "changes_applied" not in st.session_state:
-            st.session_state.changes_applied = True
         
         # Show warning and button for low coverage samples
         if len(low_coverage_samples) > 0:
@@ -397,11 +392,11 @@ if uploaded_file is not None:
             '_low_cov': None  # Hide this column
         }
         
-        # Display editable table - use on_change=None to prevent auto-reruns
+        # Display editable table
         display_cols = ['Select', 'Sample', 'Coverage', 'Features', 'Low Cov', 'Penalty', 'Analysis']
         
-        # Use a form to prevent reruns on every edit
-        with st.form("sample_selection_form"):
+        # Use a form to batch edits and prevent reruns on every change
+        with st.form("sample_table_form", clear_on_submit=False):
             edited_df = st.data_editor(
                 table_df[display_cols],
                 column_config=column_config,
@@ -411,16 +406,20 @@ if uploaded_file is not None:
                 key='sample_editor'
             )
             
-            # Quick action buttons inside form
-            col_sel1, col_sel2, col_sel3, col_sel4 = st.columns(4)
+            # Show selected count inside form
+            n_selected = edited_df['Select'].sum()
+            st.caption(f"**{n_selected} samples** selected")
+            
+            # Quick action buttons and Run inside form
+            col_sel1, col_sel2, col_sel3, col_run = st.columns([1, 1, 1, 2])
             with col_sel1:
                 select_all = st.form_submit_button("Select All", use_container_width=True)
             with col_sel2:
                 deselect_all = st.form_submit_button("Deselect All", use_container_width=True)
             with col_sel3:
-                reset_settings = st.form_submit_button("Reset Settings", use_container_width=True)
-            with col_sel4:
-                apply_changes = st.form_submit_button("Apply Changes", use_container_width=True, type="primary")
+                reset_settings = st.form_submit_button("Reset", use_container_width=True)
+            with col_run:
+                run_clicked = st.form_submit_button("Run MLMarker", type="primary", use_container_width=True)
         
         # Handle form submissions
         if select_all:
@@ -434,67 +433,41 @@ if uploaded_file is not None:
         elif reset_settings:
             del st.session_state.sample_table
             st.rerun()
-        elif apply_changes:
-            # Update session state with edits only when Apply is clicked
+        elif run_clicked:
+            # Save current edits to session state
             for i, row in edited_df.iterrows():
                 st.session_state.sample_table[i]['Select'] = row['Select']
                 st.session_state.sample_table[i]['Penalty'] = row['Penalty']
                 st.session_state.sample_table[i]['Analysis'] = row['Analysis']
-            st.rerun()
-        
-        # Check if there are pending changes by comparing edited_df with session state
-        has_pending_changes = False
-        for i, row in edited_df.iterrows():
-            saved = st.session_state.sample_table[i]
-            if (row['Select'] != saved['Select'] or 
-                row['Penalty'] != saved['Penalty'] or 
-                row['Analysis'] != saved['Analysis']):
-                has_pending_changes = True
-                break
-        
-        # Build selected samples dict for processing (use session state, not edited_df)
-        selected_samples = {}
-        for row in st.session_state.sample_table:
-            if row['Select']:
-                selected_samples[row['Sample']] = {
-                    'analysis_type': row['Analysis'],
-                    'penalty': 'Yes' if row['Penalty'] else 'No',
-                    'selected': True
-                }
-        
-        st.markdown(f"**{len(selected_samples)} samples** selected for analysis")
-        
-        # Check if button should be enabled (no pending changes and samples selected)
-        can_run = not has_pending_changes and len(selected_samples) > 0
-        
-        if has_pending_changes:
-            st.caption("⚠️ Click **Apply Changes** to enable the Run button.")
-        else:
-            st.caption("Edit the table above and click **Apply Changes** to confirm your selections.")
-        
-        # Run MLMarker button with conditional styling
-        if st.button(
-            "Run MLMarker", 
-            type="primary" if can_run else "secondary", 
-            disabled=not can_run, 
-            use_container_width=True,
-            help="Apply your changes first" if has_pending_changes else None
-        ):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
             
-            def update_progress(progress, text):
-                progress_bar.progress(progress)
-                status_text.text(text)
+            # Build selected samples dict from edited_df
+            selected_samples = {}
+            for i, row in edited_df.iterrows():
+                if row['Select']:
+                    selected_samples[st.session_state.sample_table[i]['Sample']] = {
+                        'analysis_type': row['Analysis'],
+                        'penalty': 'Yes' if row['Penalty'] else 'No',
+                        'selected': True
+                    }
             
-            results = run_mlmarker_batch(df, selected_samples, update_progress)
-            
-            st.session_state.batch_results = results
-            st.session_state.batch_coverage = coverage_df[coverage_df['sample_id'].isin(selected_samples.keys())]
-            
-            status_text.text("Done!")
-            mark_says("Markverse/cropped_images/Mark digging for gold.png", f"Processed {len(results)} samples!")
-            st.success(f"Processed {len(results)} samples!")
+            if len(selected_samples) > 0:
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                def update_progress(progress, text):
+                    progress_bar.progress(progress)
+                    status_text.text(text)
+                
+                results = run_mlmarker_batch(df, selected_samples, update_progress)
+                
+                st.session_state.batch_results = results
+                st.session_state.batch_coverage = coverage_df[coverage_df['sample_id'].isin(selected_samples.keys())]
+                
+                status_text.text("Done!")
+                mark_says("Markverse/cropped_images/Mark digging for gold.png", f"Processed {len(results)} samples!")
+                st.success(f"Processed {len(results)} samples!")
+            else:
+                st.warning("No samples selected. Please select at least one sample.")
         
         # Display results if available
         if "batch_results" in st.session_state and st.session_state.batch_results:
@@ -524,13 +497,34 @@ if uploaded_file is not None:
                     for sample_id, result in results.items()
                 }).T
                 
+                # Calculate dynamic sizing based on data dimensions
+                n_samples = len(heatmap_data)
+                n_tissues = len(heatmap_data.columns)
+                
+                # Height: minimum 400px, scale with samples (40px per sample)
+                fig_height = max(400, 40 * n_samples + 150)  # +150 for x-axis labels
+                # Width: scale with tissues (30px per tissue), but use container width
+                fig_width = max(800, 30 * n_tissues + 150)  # +150 for y-axis labels
+                
                 fig = px.imshow(
                     heatmap_data,
                     labels=dict(x="Tissue", y="Sample", color="Probability"),
                     aspect="auto",
                     color_continuous_scale="RdYlBu_r"
                 )
-                fig.update_layout(height=max(300, 25 * len(results)))
+                fig.update_layout(
+                    height=fig_height,
+                    width=fig_width,
+                    xaxis=dict(
+                        tickangle=45,
+                        tickfont=dict(size=10),
+                        side='bottom'
+                    ),
+                    yaxis=dict(
+                        tickfont=dict(size=10)
+                    ),
+                    margin=dict(l=120, r=50, t=50, b=150)  # Extra margins for labels
+                )
                 st.plotly_chart(fig, use_container_width=True)
             
             st.info("Go to **Comparison** page for detailed analysis.")
