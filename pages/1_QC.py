@@ -150,7 +150,7 @@ if show_pre_pred:
                 xaxis_title="Coverage (%)",
                 yaxis_title="Number of Samples"
             )
-            st.plotly_chart(fig_hist, width='stretch')
+            st.plotly_chart(fig_hist, width='content')
         
         with col_cov2:
             fig_bar = px.bar(
@@ -164,7 +164,7 @@ if show_pre_pred:
                 margin=dict(t=40, b=20),
                 showlegend=False
             )
-            st.plotly_chart(fig_bar, width='stretch')
+            st.plotly_chart(fig_bar, width='content')
         
         # Warn about low coverage
         low_cov = coverage_df[coverage_df['Coverage (%)'] < 5]
@@ -202,7 +202,7 @@ if show_intensity_analysis:
             color_discrete_sequence=['#3498db', '#95a5a6']
         )
         fig_pie.update_layout(height=300, margin=dict(t=40, b=20))
-        st.plotly_chart(fig_pie, width='stretch')
+        st.plotly_chart(fig_pie, width='content')
     else:
         # Multiple samples - show distributions
         col_int1, col_int2 = st.columns(2)
@@ -215,7 +215,7 @@ if show_intensity_analysis:
                 hover_data=['Sample']
             )
             fig_total.update_layout(height=350, margin=dict(t=40, b=20))
-            st.plotly_chart(fig_total, width='stretch')
+            st.plotly_chart(fig_total, width='content')
         
         with col_int2:
             # MLMarker proportion
@@ -225,7 +225,7 @@ if show_intensity_analysis:
                 hover_data=['Sample']
             )
             fig_prop.update_layout(height=350, margin=dict(t=40, b=20))
-            st.plotly_chart(fig_prop, width='stretch')
+            st.plotly_chart(fig_prop, width='content')
         
         # Stats
         st.markdown(f"""
@@ -271,7 +271,7 @@ if show_feature_correlation:
                 height=350,
                 margin=dict(t=40, b=20)
             )
-            st.plotly_chart(fig_pie, width='stretch')
+            st.plotly_chart(fig_pie, width='content')
         
         with col2:
             st.markdown("### Intensity Summary")
@@ -307,7 +307,7 @@ if show_feature_correlation:
                         xaxis_title="Non-MLMarker Intensity (sum)",
                         yaxis_title="MLMarker Intensity (sum)"
                     )
-                    st.plotly_chart(fig_scatter, width='stretch')
+                    st.plotly_chart(fig_scatter, width='content')
                     
                     # Interpretation
                     if r > 0.9:
@@ -328,7 +328,7 @@ if show_feature_correlation:
                         Interpret predictions with caution.
                         """)
                 except:
-                    st.plotly_chart(fig_scatter, width='stretch')
+                    st.plotly_chart(fig_scatter, width='content')
         else:
             # 2 samples - show scatter without regression
             fig_scatter.update_layout(
@@ -337,7 +337,7 @@ if show_feature_correlation:
                 xaxis_title="Non-MLMarker Intensity (sum)",
                 yaxis_title="MLMarker Intensity (sum)"
             )
-            st.plotly_chart(fig_scatter, width='stretch')
+            st.plotly_chart(fig_scatter, width='content')
             st.info("Add more samples (≥3) to compute correlation statistics.")
 
 # ==============================================================================
@@ -430,7 +430,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_int.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_int, width='stretch')
+                    st.plotly_chart(fig_int, width='content')
                 
                 with col_post2:
                     fig_mlm = px.box(
@@ -439,7 +439,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_mlm.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_mlm, width='stretch')
+                    st.plotly_chart(fig_mlm, width='content')
                 
                 col_post3, col_post4 = st.columns(2)
                 
@@ -450,7 +450,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_cov.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_cov, width='stretch')
+                    st.plotly_chart(fig_cov, width='content')
                 
                 with col_post4:
                     fig_prop = px.box(
@@ -459,7 +459,7 @@ if show_post_pred:
                         color='Top Tissue'
                     )
                     fig_prop.update_layout(height=350, margin=dict(t=40, b=20), showlegend=False)
-                    st.plotly_chart(fig_prop, width='stretch')
+                    st.plotly_chart(fig_prop, width='content')
                 
                 # Statistical tests if we have enough samples
                 if len(unique_tissues) == 2 and all(qc_data.groupby('Top Tissue').size() >= 3):
@@ -481,7 +481,7 @@ if show_post_pred:
                         })
                     
                     test_df = pd.DataFrame(test_results)
-                    st.dataframe(test_df, width='stretch', hide_index=True)
+                    st.dataframe(test_df, width='content', hide_index=True)
                     
                     # Interpretation
                     sig_count = sum(1 for r in test_results if r['Significant'] == 'Yes')
@@ -531,7 +531,7 @@ if show_post_pred:
                             pass
                 
                 fig_global.update_layout(height=400, margin=dict(t=40, b=20))
-                st.plotly_chart(fig_global, width='stretch')
+                st.plotly_chart(fig_global, width='content')
                 
                 st.markdown("""
                 **Interpretation**: If both predicted groups fall along the same regression line, 
@@ -546,7 +546,7 @@ st.download_button(
     coverage_df.to_csv(index=False),
     "mlmarker_qc_metrics.csv",
     "text/csv",
-    width='stretch'
+    width='content'
 )
 
 mark_says("Markverse/markgraduation.png", 

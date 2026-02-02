@@ -116,7 +116,7 @@ if show_heatmap:
         xaxis={'tickangle': -45},
         margin=dict(l=10, r=10, t=30, b=10)
     )
-    st.plotly_chart(fig_heatmap, width='stretch')
+    st.plotly_chart(fig_heatmap, width='content')
 
 # ==============================================================================
 # SECTION: PCA Analysis
@@ -247,7 +247,7 @@ if show_pca:
                         yaxis_title=f"PC2 ({pca.explained_variance_ratio_[1]:.1%} variance)",
                         margin=dict(l=10, r=10, t=40, b=10)
                     )
-                    st.plotly_chart(fig_pca, width='stretch')
+                    st.plotly_chart(fig_pca, width='content')
                 else:
                     st.info("Need more features for 2D PCA visualization.")
             
@@ -262,7 +262,7 @@ if show_pca:
                     title="PCA Variance"
                 )
                 fig_var.update_layout(height=200, margin=dict(l=10, r=10, t=40, b=10))
-                st.plotly_chart(fig_var, width='stretch')
+                st.plotly_chart(fig_var, width='content')
                 
                 # Show top contributing proteins/features
                 st.markdown("#### Top Contributing Features")
@@ -275,7 +275,7 @@ if show_pca:
                 st.dataframe(
                     pd.DataFrame({'Feature': top_pc1.index, '|Loading|': top_pc1.values.round(4)}),
                     hide_index=True,
-                    width='stretch'
+                    width='content'
                 )
             
             # Info about the analysis
@@ -318,7 +318,7 @@ if show_tissue_analysis:
             text=tissue_probs['Sample']
         )
         fig_box.update_layout(height=350, margin=dict(l=10, r=10, t=40, b=10))
-        st.plotly_chart(fig_box, width='stretch')
+        st.plotly_chart(fig_box, width='content')
     
     with col_tissue2:
         # Bar chart sorted by probability
@@ -338,7 +338,7 @@ if show_tissue_analysis:
             showlegend=False,
             margin=dict(l=10, r=10, t=40, b=10)
         )
-        st.plotly_chart(fig_bar, width='stretch')
+        st.plotly_chart(fig_bar, width='content')
     
     # Pro/Con protein analysis
     with st.expander(f"Pro/Con Proteins for {selected_tissue}", expanded=False):
@@ -380,7 +380,7 @@ if show_tissue_analysis:
                 barmode='relative', title="Pro/Con Protein Counts",
                 yaxis_title="Count", height=350, margin=dict(l=10, r=10, t=40, b=10)
             )
-            st.plotly_chart(fig_procon, width='stretch')
+            st.plotly_chart(fig_procon, width='content')
         
         with col_pc2:
             fig_net = px.bar(
@@ -392,7 +392,7 @@ if show_tissue_analysis:
             )
             fig_net.update_layout(height=max(280, 22 * len(sample_ids)), 
                                   margin=dict(l=10, r=10, t=40, b=10))
-            st.plotly_chart(fig_net, width='stretch')
+            st.plotly_chart(fig_net, width='content')
 
 # ==============================================================================
 # SECTION: Sample Comparison
@@ -428,7 +428,7 @@ if show_sample_comparison:
                 title=f"{sample_a} vs {sample_b}",
                 height=400, margin=dict(l=40, r=40, t=60, b=40)
             )
-            st.plotly_chart(fig_radar, width='stretch')
+            st.plotly_chart(fig_radar, width='content')
         
         with col_diff:
             diff = prob_matrix.loc[sample_a] - prob_matrix.loc[sample_b]
@@ -443,7 +443,7 @@ if show_sample_comparison:
                 color_continuous_midpoint=0
             )
             fig_diff.update_layout(height=400, margin=dict(l=10, r=10, t=40, b=10))
-            st.plotly_chart(fig_diff, width='stretch')
+            st.plotly_chart(fig_diff, width='content')
         
         mark_says("Markverse/cropped_images/Coding Mark.png", 
                   "Positive differences mean sample A has higher probability for that tissue!")
@@ -519,7 +519,7 @@ if show_summary:
         
         st.dataframe(
             display_df,
-            width='stretch',
+            width='content',
             height=min(400, 35 * len(sample_ids) + 40),
             hide_index=True
         )
@@ -541,7 +541,7 @@ if show_summary:
             legend=dict(orientation="h", yanchor="bottom", y=-0.3)
         )
         fig_pie.update_traces(textposition='inside', textinfo='value+label')
-        st.plotly_chart(fig_pie, width='stretch')
+        st.plotly_chart(fig_pie, width='content')
         
         st.markdown("#### Confidence Distribution")
         
@@ -567,7 +567,7 @@ if show_summary:
             xaxis_title="",
             yaxis_title="Samples"
         )
-        st.plotly_chart(fig_conf, width='stretch')
+        st.plotly_chart(fig_conf, width='content')
     
 # ==============================================================================
 # SECTION: Download Results
@@ -585,7 +585,7 @@ if show_downloads:
             data=csv_prob,
             file_name="mlmarker_probabilities.csv",
             mime="text/csv",
-            width='stretch'
+            width='content'
         )
     
     with col_dl2:
@@ -596,7 +596,7 @@ if show_downloads:
                 data=csv_summary,
                 file_name="mlmarker_summary.csv",
                 mime="text/csv",
-                width='stretch'
+                width='content'
             )
     
     with col_dl3:
@@ -607,7 +607,7 @@ if show_downloads:
                 data=csv_procon,
                 file_name=f"mlmarker_procon_{selected_tissue}.csv",
                 mime="text/csv",
-                width='stretch'
+                width='content'
             )
 
 mark_says("Markverse/markgraduation.png", 

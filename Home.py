@@ -338,7 +338,7 @@ if uploaded_file is not None:
             with col_warn:
                 st.warning(f"**{len(low_coverage_samples)} sample(s)** have <5% coverage (highlighted in red)")
             with col_btn:
-                if st.button("Enable Penalty for Low Coverage", width='stretch'):
+                if st.button("Enable Penalty for Low Coverage", width='content'):
                     for i, row in enumerate(st.session_state.sample_table):
                         if row['_low_cov']:
                             st.session_state.sample_table[i]['Penalty'] = True
@@ -400,7 +400,7 @@ if uploaded_file is not None:
             edited_df = st.data_editor(
                 table_df[display_cols],
                 column_config=column_config,
-                width='stretch',
+                width='content',
                 hide_index=True,
                 num_rows='fixed',
                 key='sample_editor'
@@ -413,13 +413,13 @@ if uploaded_file is not None:
             # Quick action buttons and Run inside form
             col_sel1, col_sel2, col_sel3, col_run = st.columns([1, 1, 1, 2])
             with col_sel1:
-                select_all = st.form_submit_button("Select All", width='stretch')
+                select_all = st.form_submit_button("Select All", width='content')
             with col_sel2:
-                deselect_all = st.form_submit_button("Deselect All", width='stretch')
+                deselect_all = st.form_submit_button("Deselect All", width='content')
             with col_sel3:
-                reset_settings = st.form_submit_button("Reset", width='stretch')
+                reset_settings = st.form_submit_button("Reset", width='content')
             with col_run:
-                run_clicked = st.form_submit_button("Run MLMarker", type="primary", width='stretch')
+                run_clicked = st.form_submit_button("Run MLMarker", type="primary", width='content')
         
         # Handle form submissions
         if select_all:
@@ -488,7 +488,7 @@ if uploaded_file is not None:
                 })
             
             summary_df = pd.DataFrame(summary_data)
-            st.dataframe(summary_df, width='stretch', hide_index=True)
+            st.dataframe(summary_df, width='content', hide_index=True)
             
             # Heatmap
             with st.expander("View Heatmap"):
@@ -525,7 +525,7 @@ if uploaded_file is not None:
                     ),
                     margin=dict(l=120, r=50, t=50, b=150)  # Extra margins for labels
                 )
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig)
             
             st.info("Go to **Comparison** page for detailed analysis.")
 
