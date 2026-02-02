@@ -74,11 +74,17 @@ for sample_id in sample_ids:
 coverage_df = pd.DataFrame(coverage_data)
 
 # --- Quick Stats ---
+n_samples = len(sample_ids)
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Samples", len(sample_ids))
+col1.metric("Samples", n_samples)
 col2.metric("Avg Coverage", f"{coverage_df['Coverage (%)'].mean():.1f}%")
 col3.metric("Low Coverage (<5%)", f"{(coverage_df['Coverage (%)'] < 5).sum()}")
 col4.metric("Avg MLMarker Signal", f"{coverage_df['MLMarker Proportion (%)'].mean():.1f}%")
+
+# Single sample mode notice
+is_single_sample = n_samples == 1
+if is_single_sample:
+    st.info("**Single sample detected.** Some comparative analyses require multiple samples.")
 
 # ==============================================================================
 # SECTION: Pre-Prediction QC (Feature Coverage)
@@ -91,44 +97,67 @@ if show_pre_pred:
     sparse samples (e.g., plasma, urine) where the penalty factor should be enabled.
     """)
     
-    col_cov1, col_cov2 = st.columns(2)
-    
-    with col_cov1:
-        fig_hist = px.histogram(
-            coverage_df, x='Coverage (%)', nbins=20,
-            title="Feature Coverage Distribution",
-            labels={'Coverage (%)': 'MLMarker Feature Coverage (%)'}
-        )
-        fig_hist.add_vline(x=5, line_dash="dash", line_color="red", 
-                          annotation_text="5% threshold")
-        fig_hist.update_layout(
-            height=350, 
-            margin=dict(t=40, b=20),
-            xaxis_title="Coverage (%)",
-            yaxis_title="Number of Samples"
-        )
-        st.plotly_chart(fig_hist, use_container_width=True)
-    
-    with col_cov2:
-        fig_bar = px.bar(
-            coverage_df.sort_values('Coverage (%)'),
-            x='Coverage (%)', y='Sample', orientation='h',
-            title="Coverage by Sample",
-            color='Coverage (%)', color_continuous_scale='RdYlGn'
-        )
-        fig_bar.update_layout(
-            height=max(300, 22 * len(sample_ids)),
-            margin=dict(t=40, b=20),
-            showlegend=False
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-    
-    # Warn about low coverage
-    low_cov = coverage_df[coverage_df['Coverage (%)'] < 5]
-    if len(low_cov) > 0:
-        st.warning(f"**{len(low_cov)} sample(s)** have <5% coverage. Consider enabling penalty factor for these.")
-        mark_says("Markverse/cropped_images/Bald Mark reading a book.png", 
-                  f"Looks like {len(low_cov)} sample(s) have low coverage. Don't worry - just enable the penalty factor!")
+    if is_single_sample:
+        # Single sample view - show metrics directly
+        sample_data = coverage_df.iloc[0]
+        
+        col_s1, col_s2, col_s3 = st.columns(3)
+        col_s1.metric("Total Proteins Detected", int(sample_data['Total Proteins']))
+        col_s2.metric("MLMarker Features Found", int(sample_data['MLMarker Features']))
+        col_s3.metric("Coverage", f"{sample_data['Coverage (%)']:.1f}%")
+        
+        # Coverage gauge
+        coverage_pct = sample_data['Coverage (%)']
+        if coverage_pct < 5:
+            st.warning(f"**Low coverage ({coverage_pct:.1f}%)** - Consider enabling the penalty factor.")
+            mark_says("Markverse/cropped_images/Bald Mark reading a book.png", 
+                      "Low coverage detected! Enable the penalty factor on the Home page for better results.")
+        elif coverage_pct < 20:
+            st.info(f"**Moderate coverage ({coverage_pct:.1f}%)** - Predictions should be reliable.")
+        else:
+            st.success(f"**Good coverage ({coverage_pct:.1f}%)** - Excellent data quality!")
+            mark_says("Markverse/cropped_images/Mark digging for gold.png", 
+                      f"Great coverage at {coverage_pct:.1f}%! Your prediction should be reliable.")
+    else:
+        # Multiple samples view - show distributions
+        col_cov1, col_cov2 = st.columns(2)
+        
+        with col_cov1:
+            fig_hist = px.histogram(
+                coverage_df, x='Coverage (%)', nbins=20,
+                title="Feature Coverage Distribution",
+                labels={'Coverage (%)': 'MLMarker Feature Coverage (%)'}
+            )
+            fig_hist.add_vline(x=5, line_dash="dash", line_color="red", 
+                              annotation_text="5% threshold")
+            fig_hist.update_layout(
+                height=350, 
+                margin=dict(t=40, b=20),
+                xaxis_title="Coverage (%)",
+                yaxis_title="Number of Samples"
+            )
+            st.plotly_chart(fig_hist, use_container_width=True)
+        
+        with col_cov2:
+            fig_bar = px.bar(
+                coverage_df.sort_values('Coverage (%)'),
+                x='Coverage (%)', y='Sample', orientation='h',
+                title="Coverage by Sample",
+                color='Coverage (%)', color_continuous_scale='RdYlGn'
+            )
+            fig_bar.update_layout(
+                height=max(300, 22 * len(sample_ids)),
+                margin=dict(t=40, b=20),
+                showlegend=False
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+        
+        # Warn about low coverage
+        low_cov = coverage_df[coverage_df['Coverage (%)'] < 5]
+        if len(low_cov) > 0:
+            st.warning(f"**{len(low_cov)} sample(s)** have <5% coverage. Consider enabling penalty factor for these.")
+            mark_says("Markverse/cropped_images/Bald Mark reading a book.png", 
+                      f"Looks like {len(low_cov)} sample(s) have low coverage. Don't worry - just enable the penalty factor!")
 
 # ==============================================================================
 # SECTION: Intensity Analysis
@@ -142,37 +171,57 @@ if show_intensity_analysis:
     should be similar across samples regardless of their predicted tissue.
     """)
     
-    col_int1, col_int2 = st.columns(2)
-    
-    with col_int1:
-        # Total intensity distribution
-        fig_total = px.box(
-            coverage_df, y='Total Intensity',
-            points='all', title="Total Protein Intensity",
-            hover_data=['Sample']
+    if is_single_sample:
+        # Single sample - show direct metrics
+        sample_data = coverage_df.iloc[0]
+        
+        col_i1, col_i2, col_i3 = st.columns(3)
+        col_i1.metric("Total Intensity", f"{sample_data['Total Intensity']:,.0f}")
+        col_i2.metric("MLMarker Intensity", f"{sample_data['MLMarker Intensity']:,.0f}")
+        col_i3.metric("MLMarker Proportion", f"{sample_data['MLMarker Proportion (%)']:.1f}%")
+        
+        # Pie chart of intensity breakdown
+        fig_pie = px.pie(
+            values=[sample_data['MLMarker Intensity'], sample_data['Non-MLMarker Intensity']],
+            names=['MLMarker Features', 'Other Proteins'],
+            title="Intensity Breakdown",
+            color_discrete_sequence=['#3498db', '#95a5a6']
         )
-        fig_total.update_layout(height=350, margin=dict(t=40, b=20))
-        st.plotly_chart(fig_total, use_container_width=True)
-    
-    with col_int2:
-        # MLMarker proportion
-        fig_prop = px.box(
-            coverage_df, y='MLMarker Proportion (%)',
-            points='all', title="MLMarker Signal Proportion",
-            hover_data=['Sample']
-        )
-        fig_prop.update_layout(height=350, margin=dict(t=40, b=20))
-        st.plotly_chart(fig_prop, use_container_width=True)
-    
-    # Stats
-    st.markdown(f"""
-    **Summary Statistics:**
-    - Mean MLMarker proportion: **{coverage_df['MLMarker Proportion (%)'].mean():.1f}%**
-    - Std deviation: **{coverage_df['MLMarker Proportion (%)'].std():.1f}%**
-    
-    A consistent MLMarker proportion across samples suggests intensity variation is a **global sample-level 
-    effect** unrelated to MLMarker's feature space.
-    """)
+        fig_pie.update_layout(height=300, margin=dict(t=40, b=20))
+        st.plotly_chart(fig_pie, use_container_width=True)
+    else:
+        # Multiple samples - show distributions
+        col_int1, col_int2 = st.columns(2)
+        
+        with col_int1:
+            # Total intensity distribution
+            fig_total = px.box(
+                coverage_df, y='Total Intensity',
+                points='all', title="Total Protein Intensity",
+                hover_data=['Sample']
+            )
+            fig_total.update_layout(height=350, margin=dict(t=40, b=20))
+            st.plotly_chart(fig_total, use_container_width=True)
+        
+        with col_int2:
+            # MLMarker proportion
+            fig_prop = px.box(
+                coverage_df, y='MLMarker Proportion (%)',
+                points='all', title="MLMarker Signal Proportion",
+                hover_data=['Sample']
+            )
+            fig_prop.update_layout(height=350, margin=dict(t=40, b=20))
+            st.plotly_chart(fig_prop, use_container_width=True)
+        
+        # Stats
+        st.markdown(f"""
+        **Summary Statistics:**
+        - Mean MLMarker proportion: **{coverage_df['MLMarker Proportion (%)'].mean():.1f}%**
+        - Std deviation: **{coverage_df['MLMarker Proportion (%)'].std():.1f}%**
+        
+        A consistent MLMarker proportion across samples suggests intensity variation is a **global sample-level 
+        effect** unrelated to MLMarker's feature space.
+        """)
 
 # ==============================================================================
 # SECTION: Feature Correlation
