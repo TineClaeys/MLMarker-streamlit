@@ -28,7 +28,7 @@ with st.sidebar:
     show_feature_correlation = st.checkbox("Feature Correlation", value=False)
     show_post_pred = st.checkbox("Post-Prediction QC", value=False)
     st.markdown("---")
-    mark_says("Markverse/mark_binoculars.png", "Let's inspect your data quality!")
+    mark_says("Markverse/Markwithamassspec.png", "Let's inspect your data quality!")
 
 # --- Get MLMarker features ---
 @st.cache_data

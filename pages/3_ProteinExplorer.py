@@ -48,7 +48,7 @@ with st.sidebar:
     show_stats = st.checkbox("Statistics", value=False)
     
     st.markdown("---")
-    mark_says("Markverse/mark_binoculars.png", f"Exploring proteins for {current_sample}")
+    mark_says("Markverse/Markwithamassspec.png", f"Exploring proteins for {current_sample}")
 
 st.markdown(f"**Current Sample:** {current_sample}")
 
@@ -194,5 +194,5 @@ if show_stats and len(shap_data) > 0:
 if len(shap_data) > 0:
     st.markdown("---")
     st.info(f"**{len(shap_data)} proteins** selected. Go to **Functional Analysis** to run ORA on these proteins.")
-    mark_says("Markverse/cropped_images/Mark knitting.png", 
+    mark_says("Markverse/Mark digging for gold.png", 
               "I'm keeping track of your protein selection for Functional Analysis!")

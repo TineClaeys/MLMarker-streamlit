@@ -56,7 +56,7 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    mark_says("Markverse/mark_binoculars.png", f"Viewing: {current_sample}")
+    mark_says("Markverse/mark pointing.png", f"Viewing: {current_sample}")
 
 st.markdown(f"**Current Sample:** {current_sample}")
 

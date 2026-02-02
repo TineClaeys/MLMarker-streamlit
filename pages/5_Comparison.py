@@ -66,7 +66,7 @@ with st.sidebar:
     
     st.markdown("---")
     mark_says("Markverse/mark_binoculars.png", 
-              f"Comparing {len(sample_ids)} samples! Let's see what we find!")
+              f"Scanning {len(sample_ids)} samples! Let's see what we find!")
 
 # ==============================================================================
 # SECTION: Overview Heatmap

@@ -51,7 +51,7 @@ with st.sidebar:
     show_visual = st.checkbox("Visualization", value=False)
     
     st.markdown("---")
-    mark_says("Markverse/Bald Mark reading about MS.png", "Let's find what functions your proteins have!")
+    mark_says("Markverse/Markwithamassspec.png", "Let's find what functions your proteins have!")
 
 st.markdown(f"**Current Sample:** {current_sample}")
 

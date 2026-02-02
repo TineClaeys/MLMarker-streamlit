@@ -217,7 +217,7 @@ with col1:
     st.markdown("**Format:** Proteins as columns, samples as rows")
     test_button = st.button("Try Example Data")
     if test_button:
-        mark_says("Markverse/mark_binoculars.png", "Test file loaded! Let me show you around!")
+        mark_says("Markverse/octopus.png", "Test file loaded! Let me show you around!")
         st.session_state.uploaded_file = "testsample.tsv"
 
 with col2:
@@ -464,7 +464,7 @@ if uploaded_file is not None:
                 st.session_state.batch_coverage = coverage_df[coverage_df['sample_id'].isin(selected_samples.keys())]
                 
                 status_text.text("Done!")
-                mark_says("Markverse/Mark_on_a_rocket.png", f"Processed {len(results)} samples! To the results!")
+                mark_says("Markverse/mark_tothemoon.png", f"Processed {len(results)} samples! To the moon!")
                 st.success(f"Processed {len(results)} samples!")
             else:
                 st.warning("No samples selected. Please select at least one sample.")
