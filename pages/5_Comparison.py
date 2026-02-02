@@ -141,7 +141,7 @@ if show_pca:
     # PCA mode selection with clear descriptions
     pca_options = {
         "All Proteins (Abundances)": "PCA on all protein abundances in your dataset",
-        "MLMarker Features (Abundances)": "PCA on abundances of the 3,427 MLMarker model proteins",
+        "MLMarker Features (Abundances)": "PCA on abundances of the MLMarker model proteins",
         "Overall SHAP Profile": "PCA on mean |SHAP| values across all tissues",
         "Tissue-Specific SHAP": "PCA on SHAP values for a specific tissue"
     }
@@ -569,13 +569,6 @@ if show_summary:
         )
         st.plotly_chart(fig_conf, use_container_width=True)
     
-    # Expandable: samples grouped by tissue
-    with st.expander("View Samples by Predicted Tissue", expanded=False):
-        for tissue in sorted(summary_df['Predicted Tissue'].unique()):
-            tissue_samples = summary_df[summary_df['Predicted Tissue'] == tissue]['Sample'].tolist()
-            st.markdown(f"**{tissue}** ({len(tissue_samples)} samples)")
-            st.caption(", ".join(tissue_samples))
-
 # ==============================================================================
 # SECTION: Download Results
 # ==============================================================================
