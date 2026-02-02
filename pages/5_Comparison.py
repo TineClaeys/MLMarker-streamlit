@@ -8,7 +8,14 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from scipy import stats
 import mlmarker
+
+# Import custom functions with fallbacks
 from custom_functions import mark_says
+try:
+    from custom_functions import show_help, HELP_CONTENT
+except ImportError:
+    def show_help(topic, title=None): pass
+    HELP_CONTENT = {}
 
 st.set_page_config(page_title="Comparative Analysis - MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')
@@ -295,7 +302,7 @@ if show_pca:
 if show_group_comparison:
     st.markdown("---")
     st.markdown("## Group Comparison")
-    st.caption("Compare two groups of samples with statistical tests")
+    st.caption("Compare tissue probability distributions between two groups using Mann-Whitney U test")
     
     if len(sample_ids) < 4:
         st.warning("Need at least 4 samples (2 per group) for group comparison.")
@@ -334,20 +341,17 @@ if show_group_comparison:
         # Run analysis if both groups have samples
         if len(group_a_samples) >= 2 and len(group_b_samples) >= 2:
             st.markdown("---")
-            st.markdown("### Statistical Comparison")
+            st.markdown("### Statistical Comparison (Mann-Whitney U)")
             
             # Get probabilities for each group
             group_a_probs = prob_matrix.loc[group_a_samples]
             group_b_probs = prob_matrix.loc[group_b_samples]
             
-            # Calculate statistics for each tissue
+            # Calculate Mann-Whitney U test for each tissue
             stats_results = []
             for tissue in all_tissues:
                 a_vals = group_a_probs[tissue].values
                 b_vals = group_b_probs[tissue].values
-                
-                # t-test
-                t_stat, t_pval = stats.ttest_ind(a_vals, b_vals, equal_var=False)
                 
                 # Mann-Whitney U test (non-parametric)
                 try:
@@ -355,105 +359,60 @@ if show_group_comparison:
                 except ValueError:
                     u_stat, u_pval = np.nan, np.nan
                 
-                # Effect size (Cohen's d)
-                pooled_std = np.sqrt(((len(a_vals)-1)*np.std(a_vals, ddof=1)**2 + 
-                                      (len(b_vals)-1)*np.std(b_vals, ddof=1)**2) / 
-                                     (len(a_vals) + len(b_vals) - 2))
-                cohens_d = (np.mean(a_vals) - np.mean(b_vals)) / pooled_std if pooled_std > 0 else 0
-                
                 stats_results.append({
                     'Tissue': tissue,
-                    'Mean A': np.mean(a_vals),
-                    'Mean B': np.mean(b_vals),
-                    'Diff (A-B)': np.mean(a_vals) - np.mean(b_vals),
-                    't-statistic': t_stat,
-                    'p-value (t-test)': t_pval,
-                    'p-value (Mann-Whitney)': u_pval,
-                    "Cohen's d": cohens_d
+                    'Median A': np.median(a_vals),
+                    'Median B': np.median(b_vals),
+                    'Diff (A-B)': np.median(a_vals) - np.median(b_vals),
+                    'U-statistic': u_stat,
+                    'p-value': u_pval
                 })
             
             stats_df = pd.DataFrame(stats_results)
             
-            # Apply multiple testing correction (Benjamini-Hochberg)
-            from scipy.stats import false_discovery_control
-            try:
-                stats_df['FDR (t-test)'] = false_discovery_control(stats_df['p-value (t-test)'].values)
-            except:
-                # Fallback for older scipy versions
-                stats_df['FDR (t-test)'] = stats_df['p-value (t-test)'] * len(stats_df) / (
-                    stats_df['p-value (t-test)'].rank()
-                )
-            
             # Sort by significance
-            stats_df = stats_df.sort_values('p-value (t-test)')
+            stats_df = stats_df.sort_values('p-value')
             
-            # Display results
-            col_stats1, col_stats2 = st.columns([2, 1])
+            # Summary of significant findings
+            sig_tissues = stats_df[stats_df['p-value'] < 0.05]
             
-            with col_stats1:
-                # Volcano-style plot (difference vs -log10 p-value)
-                plot_df = stats_df.copy()
-                plot_df['-log10(p)'] = -np.log10(plot_df['p-value (t-test)'].clip(lower=1e-10))
-                plot_df['Significant'] = plot_df['FDR (t-test)'] < 0.05
-                
-                fig_volcano = px.scatter(
-                    plot_df,
-                    x='Diff (A-B)',
-                    y='-log10(p)',
-                    color='Significant',
-                    text='Tissue',
-                    title="Group Differences: Volcano Plot",
-                    color_discrete_map={True: '#e74c3c', False: '#95a5a6'}
-                )
-                fig_volcano.add_hline(y=-np.log10(0.05), line_dash="dash", 
-                                      annotation_text="p=0.05", line_color="gray")
-                fig_volcano.update_traces(textposition='top center', marker=dict(size=10))
-                fig_volcano.update_layout(
-                    height=400,
-                    xaxis_title="Mean Difference (Group A - Group B)",
-                    yaxis_title="-log₁₀(p-value)",
-                    margin=dict(l=10, r=10, t=40, b=10)
-                )
-                st.plotly_chart(fig_volcano, width='content')
+            col_res1, col_res2 = st.columns([1, 1])
             
-            with col_stats2:
-                # Summary of significant findings
-                sig_tissues = stats_df[stats_df['FDR (t-test)'] < 0.05]
-                st.markdown("#### Significant Differences")
-                st.caption("FDR < 0.05")
+            with col_res1:
+                st.markdown("#### Significant Differences (p < 0.05)")
                 if len(sig_tissues) > 0:
                     for _, row in sig_tissues.iterrows():
-                        direction = "↑ in A" if row['Diff (A-B)'] > 0 else "↓ in A"
-                        cohens_d_val = row["Cohen's d"]
-                        st.write(f"**{row['Tissue']}**: {direction} (d={cohens_d_val:.2f})")
+                        direction = "higher in A" if row['Diff (A-B)'] > 0 else "higher in B"
+                        st.write(f"**{row['Tissue']}**: {direction} (p={row['p-value']:.4f})")
                 else:
-                    st.info("No tissues show significant differences at FDR < 0.05")
+                    st.info("No tissues show significant differences at p < 0.05")
             
-            # Full results table
+            with col_res2:
+                st.markdown("#### All Tissues Summary")
+                st.caption(f"{len(sig_tissues)} of {len(all_tissues)} tissues differ significantly")
+            
+            # Results table
             with st.expander("Full Statistical Results", expanded=False):
                 display_df = stats_df.copy()
-                # Format numbers
-                for col in ['Mean A', 'Mean B', 'Diff (A-B)', 't-statistic', "Cohen's d"]:
+                for col in ['Median A', 'Median B', 'Diff (A-B)', 'U-statistic']:
                     display_df[col] = display_df[col].round(4)
-                for col in ['p-value (t-test)', 'p-value (Mann-Whitney)', 'FDR (t-test)']:
-                    display_df[col] = display_df[col].apply(lambda x: f"{x:.2e}" if x < 0.001 else f"{x:.4f}")
+                display_df['p-value'] = display_df['p-value'].apply(lambda x: f"{x:.4f}" if pd.notna(x) else "N/A")
                 
-                st.dataframe(display_df, hide_index=True, width=None)
+                st.dataframe(display_df, hide_index=True)
                 
                 # Download button
                 csv_stats = stats_df.to_csv(index=False)
                 st.download_button(
-                    "📥 Download Statistics CSV",
+                    "Download Statistics CSV",
                     csv_stats,
                     "group_comparison_stats.csv",
                     "text/csv"
                 )
             
-            # Box plots for top differences
+            # Box plots for top 4 tissues by significance
             st.markdown("### Tissue Probability Distributions by Group")
             
-            # Get top 4 tissues by effect size
-            top_tissues = stats_df.nlargest(4, "Cohen's d", keep='first')['Tissue'].tolist()
+            top_tissues = stats_df.head(4)['Tissue'].tolist()
             
             # Prepare data for box plots
             box_data = []
@@ -470,14 +429,14 @@ if show_group_comparison:
                 y='Probability',
                 color='Group',
                 points='all',
-                title="Top 4 Tissues by Effect Size",
+                title="Top 4 Tissues by Significance",
                 color_discrete_map={'A': '#3498db', 'B': '#e74c3c'}
             )
             fig_boxes.update_layout(height=400, margin=dict(l=10, r=10, t=40, b=10))
             st.plotly_chart(fig_boxes, width='content')
             
             mark_says("Markverse/Markwithamassspec.png", 
-                      "Statistical differences revealed! Check those p-values carefully though!")
+                      "Group comparison complete! Check the distributions above.")
         
         elif len(group_a_samples) > 0 or len(group_b_samples) > 0:
             st.info("Select at least 2 samples in each group to run statistical tests.")

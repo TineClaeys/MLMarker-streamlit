@@ -309,6 +309,43 @@ Quantified analysis generally provides better predictions when intensity values 
 - Clustering indicates similar expression patterns
 
 Useful for identifying sample groups and outliers.
+""",
+    'pro_con': """
+**Pro/Con Proteins** indicate how each protein influences the prediction for a specific tissue.
+
+- **Pro (positive SHAP)**: Protein expression pattern supports this tissue prediction
+- **Con (negative SHAP)**: Protein expression pattern opposes this tissue prediction
+
+The sum of all pro/con contributions determines the final tissue probability.
+""",
+    'abundance': """
+**Abundance** refers to the protein intensity/expression level in your sample.
+
+- **Present**: Protein was detected (value > 0)
+- **Absent**: Protein was not detected or below detection limit (value = 0)
+
+Filtering by abundance helps identify which detected proteins drive predictions.
+""",
+    'mlmarker_features': """
+**MLMarker Features** are the 5,979 proteins used by the MLMarker model.
+
+These proteins were selected during model training as informative for distinguishing between 34 tissue types.
+Only proteins in this feature set contribute to predictions.
+""",
+    'mann_whitney': """
+**Mann-Whitney U Test** is a non-parametric statistical test.
+
+It compares whether two groups have different distributions without assuming normality.
+A p-value < 0.05 suggests the groups have significantly different tissue probability distributions.
+""",
+    'heatmap': """
+**Tissue Probability Heatmap** shows predictions for all samples at once.
+
+- Rows = Samples
+- Columns = Tissues
+- Color intensity = Probability (higher = more similar)
+
+Useful for identifying patterns across multiple samples.
 """
 }
 
@@ -316,7 +353,7 @@ Useful for identifying sample groups and outliers.
 def show_help(topic, title=None):
     """Display a help popover for a given topic."""
     if topic in HELP_CONTENT:
-        with st.popover("❓" if title is None else f"❓ {title}"):
+        with st.popover("?" if title is None else f"? {title}"):
             st.markdown(HELP_CONTENT[topic])
 
 
@@ -483,7 +520,7 @@ def inject_keyboard_shortcuts(download_callback_key=None):
     components.html(js_code, height=0)
 
 
-def copy_to_clipboard_button(text, button_label="📋 Copy", key=None):
+def copy_to_clipboard_button(text, button_label="Copy", key=None):
     """Create a button that copies text to clipboard."""
     # Use a unique key for each button
     if key is None:
@@ -496,7 +533,7 @@ def copy_to_clipboard_button(text, button_label="📋 Copy", key=None):
     
     components.html(f"""
     <button onclick="navigator.clipboard.writeText(`{text}`).then(() => {{
-        this.innerHTML = '✓ Copied!';
+        this.innerHTML = 'Copied!';
         setTimeout(() => this.innerHTML = '{button_label}', 2000);
     }})" style="
         padding: 5px 10px;

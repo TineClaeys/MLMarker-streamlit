@@ -24,16 +24,11 @@ import base64
 # Import custom functions with fallbacks for missing functions
 from custom_functions import mark_says
 try:
-    from custom_functions import HELP_CONTENT, show_help, render_theme_toggle, get_theme_colors, apply_theme_to_figure, inject_keyboard_shortcuts, render_keyboard_shortcuts_help
+    from custom_functions import HELP_CONTENT, show_help
 except ImportError:
     # Fallback definitions if custom_functions hasn't been updated
     HELP_CONTENT = {}
     def show_help(topic, title=None): pass
-    def render_theme_toggle(): pass
-    def get_theme_colors(): return {'template': 'plotly_white'}
-    def apply_theme_to_figure(fig, colors=None): return fig
-    def inject_keyboard_shortcuts(): pass
-    def render_keyboard_shortcuts_help(): pass
 
 
 st.set_page_config(page_title="MLMarker", page_icon=":octopus:", layout='wide')
@@ -249,15 +244,7 @@ all_possible_tissues = sorted(['Nasal Polyps', 'Duodenum', 'Small intestine', 'P
 
 # --- Sidebar ---
 with st.sidebar:
-    # Dark mode toggle
-    render_theme_toggle()
-    # Keyboard shortcuts help
-    render_keyboard_shortcuts_help()
-    st.markdown("---")
     mark_says("Markverse/mark pointing.png", "Hi! I'm Mark. Let's predict what tissue is in your sample!")
-
-# Inject keyboard shortcuts
-inject_keyboard_shortcuts()
 
 # --- Header ---
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])

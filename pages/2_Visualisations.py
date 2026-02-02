@@ -3,7 +3,14 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+
+# Import custom functions with fallbacks
 from custom_functions import mark_says, render_sample_selector, get_sample_data
+try:
+    from custom_functions import show_help, HELP_CONTENT
+except ImportError:
+    def show_help(topic, title=None): pass
+    HELP_CONTENT = {}
 
 st.set_page_config(page_title="Visualisations - MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')

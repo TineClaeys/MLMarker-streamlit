@@ -5,7 +5,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 from scipy import stats
 import mlmarker
+
+# Import custom functions with fallbacks
 from custom_functions import mark_says
+try:
+    from custom_functions import show_help, HELP_CONTENT
+except ImportError:
+    def show_help(topic, title=None): pass
+    HELP_CONTENT = {}
 
 st.set_page_config(page_title="Quality Control - MLMarker", page_icon=":octopus:", layout='wide')
 st.logo('octopus.png')

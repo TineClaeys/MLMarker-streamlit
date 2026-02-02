@@ -213,7 +213,7 @@ if show_table and len(shap_data) > 0:
     col_dl, col_cp = st.columns(2)
     with col_dl:
         st.download_button(
-            "📥 Download Full Table",
+            "Download Full Table",
             subset.to_csv(index=False),
             f"proteins_{current_sample}_{selected_tissue}.csv",
             "text/csv"
@@ -221,7 +221,7 @@ if show_table and len(shap_data) > 0:
     with col_cp:
         # Copy protein IDs to clipboard
         protein_ids = '\n'.join(subset['id'].tolist())
-        copy_to_clipboard_button(protein_ids, "📋 Copy Protein IDs", key=f"copy_proteins_{current_sample}_{selected_tissue}")
+        copy_to_clipboard_button(protein_ids, "Copy Protein IDs", key=f"copy_proteins_{current_sample}_{selected_tissue}")
 
 elif show_table:
     st.info("No proteins match the current filters.")
