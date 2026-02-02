@@ -65,14 +65,20 @@ all_tissues = sorted(list(results[sample_ids[0]]['summed_pred'].index))
 with st.sidebar:
     st.markdown("### Analysis Options")
     
-    show_heatmap = st.checkbox("Tissue Probability Heatmap", value=True)
-    show_pca = st.checkbox("PCA Analysis", value=False)
-    show_group_comparison = st.checkbox("Group Comparison", value=False, 
-                                        help="Compare two groups of samples with statistical tests")
-    show_tissue_analysis = st.checkbox("Tissue-Specific Analysis", value=False)
-    show_sample_comparison = st.checkbox("Sample Comparison", value=False)
-    show_summary = st.checkbox("Top Tissue Summary", value=False)
-    show_downloads = st.checkbox("Download Results", value=False)
+    show_heatmap = st.checkbox("Tissue Probability Heatmap", value=True,
+        help="Visual overview of tissue probabilities across all samples.")
+    show_pca = st.checkbox("PCA Analysis", value=False,
+        help="Cluster samples by prediction profiles or protein abundances.")
+    show_group_comparison = st.checkbox("Group Comparison", value=False,
+        help="Compare tissue similarity between two sample groups using Mann-Whitney U test.")
+    show_tissue_analysis = st.checkbox("Tissue-Specific Analysis", value=False,
+        help="Deep dive into how samples differ for a specific tissue.")
+    show_sample_comparison = st.checkbox("Sample Comparison", value=False,
+        help="Directly compare two samples' tissue profiles.")
+    show_summary = st.checkbox("Top Tissue Summary", value=False,
+        help="Quick summary of top predicted tissue per sample.")
+    show_downloads = st.checkbox("Download Results", value=False,
+        help="Export probability matrix and prediction data.")
     
     st.markdown("---")
     mark_says("Markverse/mark_binoculars.png", 
@@ -94,12 +100,14 @@ if show_heatmap:
                 sort_samples = st.selectbox(
                     "Sort samples by",
                     ["Original order", "Top tissue", "Hierarchical clustering"],
-                    key="sort_samples"
+                    key="sort_samples",
+                    help="How to order samples on the y-axis."
                 )
                 color_scale = st.selectbox(
                     "Color scale",
                     ["RdYlBu_r", "Viridis", "Plasma", "Blues"],
-                    key="color_scale"
+                    key="color_scale",
+                    help="Color scheme for the heatmap."
                 )
     
     # Sort samples if needed
@@ -167,7 +175,8 @@ if show_pca:
     # Additional options based on mode
     pca_tissue = None
     if pca_mode == "Tissue-Specific SHAP":
-        pca_tissue = st.selectbox("Select tissue", all_tissues, key="pca_tissue")
+        pca_tissue = st.selectbox("Select tissue", all_tissues, key="pca_tissue",
+            help="Choose tissue for SHAP-based clustering.")
     
     # Build the data matrix based on selection
     pca_matrix = None
@@ -561,9 +570,11 @@ if show_sample_comparison:
     
     col_comp1, col_comp2 = st.columns(2)
     with col_comp1:
-        sample_a = st.selectbox("Sample A", sample_ids, key="sample_a")
+        sample_a = st.selectbox("Sample A", sample_ids, key="sample_a",
+            help="First sample for comparison.")
     with col_comp2:
-        sample_b = st.selectbox("Sample B", sample_ids, index=min(1, len(sample_ids)-1), key="sample_b")
+        sample_b = st.selectbox("Sample B", sample_ids, index=min(1, len(sample_ids)-1), key="sample_b",
+            help="Second sample for comparison.")
     
     if sample_a != sample_b:
         col_radar, col_diff = st.columns(2)
@@ -755,7 +766,7 @@ if show_downloads:
     with col_dl1:
         csv_prob = prob_matrix.to_csv()
         st.download_button(
-            label="📊 Probability Matrix",
+            label="Probability Matrix",
             data=csv_prob,
             file_name="mlmarker_probabilities.csv",
             mime="text/csv",
@@ -765,7 +776,7 @@ if show_downloads:
     with col_dl2:
         csv_summary = download_summary_df.to_csv(index=False)
         st.download_button(
-            label="📋 Summary Table",
+            label="Summary Table",
             data=csv_summary,
             file_name="mlmarker_summary.csv",
             mime="text/csv",
@@ -828,7 +839,7 @@ if show_downloads:
         </html>
         """
         st.download_button(
-            label="📄 HTML Report",
+            label="HTML Report",
             data=html_report,
             file_name="mlmarker_report.html",
             mime="text/html",

@@ -49,9 +49,12 @@ with st.sidebar:
         prediction_summed = result['summed_pred']
     
     st.markdown("### Analysis Options")
-    show_overview = st.checkbox("Tissue Overview", value=True)
-    show_tissue_detail = st.checkbox("Tissue forceplot", value=False)
-    show_scatter = st.checkbox("Protein Comparison", value=False)
+    show_overview = st.checkbox("Tissue Overview", value=True,
+        help="Bar chart showing total positive and negative SHAP contributions per tissue.")
+    show_tissue_detail = st.checkbox("Tissue forceplot", value=False,
+        help="Stacked bar showing top proteins driving a specific tissue prediction.")
+    show_scatter = st.checkbox("Protein Comparison", value=False,
+        help="Scatter plot comparing protein contributions between two tissues.")
     
     st.markdown("---")
     st.download_button(
@@ -181,9 +184,11 @@ if show_tissue_detail:
     
     col_sel, col_opt = st.columns([2, 1])
     with col_sel:
-        selected_tissue = st.selectbox("Select tissue", tissues, key="tissue_detail")
+        selected_tissue = st.selectbox("Select tissue", tissues, key="tissue_detail",
+            help="Choose which tissue to analyze.")
     with col_opt:
-        top_n = st.slider("Top proteins to show", 5, 20, 10, key="top_n_proteins")
+        top_n = st.slider("Top proteins to show", 5, 20, 10, key="top_n_proteins",
+            help="Number of most impactful proteins to display.")
     
     if st.button("Generate Forceplot", key="btn_forceplot"):
         fig, pro_proteins, con_proteins = visualise_tissue_forceplot(
@@ -224,10 +229,12 @@ if show_scatter:
     
     col1, col2 = st.columns(2)
     with col1:
-        tissue_a = st.selectbox("Tissue A", tissues, key="scatter_tissue_a")
+        tissue_a = st.selectbox("Tissue A", tissues, key="scatter_tissue_a",
+            help="First tissue for comparison.")
     with col2:
         tissue_b = st.selectbox("Tissue B", tissues, 
-                                index=min(1, len(tissues)-1), key="scatter_tissue_b")
+                                index=min(1, len(tissues)-1), key="scatter_tissue_b",
+            help="Second tissue for comparison.")
     
     if tissue_a != tissue_b:
         if st.button("Compare Tissues", key="btn_scatter"):

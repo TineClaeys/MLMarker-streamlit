@@ -298,24 +298,7 @@ if uploaded_file is not None:
     st.write("Uploaded data preview:")
     st.dataframe(df)
     st.write(df.shape)
-    
-    # Data validation
-    with st.expander("📊 Data Quality Check", expanded=False):
-        warnings, suggestions, info = validate_data(df)
         
-        if warnings:
-            for w in warnings:
-                st.warning(w)
-        if suggestions:
-            st.markdown("**💡 Suggestions:**")
-            for s in suggestions:
-                st.caption(f"• {s}")
-        if info:
-            for i in info:
-                st.info(i)
-        if not warnings and not info:
-            st.success("✓ Data looks good! No issues detected.")
-    
     # Get MLMarker features for coverage calculation
     mlmarker_features = get_mlmarker_features()
     
@@ -338,19 +321,19 @@ if uploaded_file is not None:
         sample_id = st.selectbox("Select sample to analyze", df.index.tolist(), key="sample_id", help="This application allows you to run one sample at a time which you should select here. If you want to analyze at higher throughputs, use the python package")
 
         # Choose analysis type and penalty
-        col_analysis, col_help1 = st.columns([4, 1])
-        with col_analysis:
-            analysis_type = st.selectbox("Use quantified or binary data", ["Quantified proteins", "Binary quantification"], key="analysis_type", help="Quantified proteins will minmax normalize the quantification of your sample. When you have no little quantitative information or are working with e.g. Olink data, you can use binary classification, this will result in decreased performance and should be used with caution")
-        with col_help1:
-            st.markdown("")  # Spacer
-            show_help('binary_vs_quantified', "Analysis Types")
+        analysis_type = st.selectbox(
+            "Use quantified or binary data", 
+            ["Quantified proteins", "Binary quantification"], 
+            key="analysis_type", 
+            help="**Quantified**: Uses actual intensity values (MinMax normalized). Best for quantitative proteomics.\n\n**Binary**: Only considers presence/absence (1 or 0). Use for semi-quantitative data like Olink."
+        )
         
-        col_penalty, col_help2 = st.columns([4, 1])
-        with col_penalty:
-            penalty = st.selectbox("Penalize absent proteins", ["No", "Yes"], key="penalty", help="Setting this to Yes will decrease the impact of missing proteins and can be used when working with cell lines, fluids, organoids or single cells. For normal tissue samples this will result in decreased performance")
-        with col_help2:
-            st.markdown("")  # Spacer
-            show_help('penalty', "Penalty Factor")
+        penalty = st.selectbox(
+            "Penalize absent proteins", 
+            ["No", "Yes"], 
+            key="penalty", 
+            help="**No (OFF)**: Best for solid tissue samples where most proteins should be present.\n\n**Yes (ON)**: Best for sparse samples (plasma, urine, cell lines, organoids) where many proteins are naturally absent. Missing proteins will have less negative impact."
+        )
         
         if penalty == "Yes":
             mark_says("Markverse/cropped_images/Coding Mark.png", "Penalty is ON! I'll down-weight missing proteins - perfect for cell lines, fluids, or organoids!")
@@ -465,7 +448,7 @@ if uploaded_file is not None:
                 help='MLMarker features detected'
             ),
             'Low Cov': st.column_config.TextColumn(
-                '⚠️',
+                'Low',
                 disabled=True,
                 width='small',
                 help='Low coverage indicator (<5%)'

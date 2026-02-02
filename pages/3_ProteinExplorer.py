@@ -52,8 +52,10 @@ with st.sidebar:
         prediction_summed = result['summed_pred']
     
     st.markdown("### Analysis Options")
-    show_table = st.checkbox("Protein Table", value=True)
-    show_stats = st.checkbox("Statistics", value=False)
+    show_table = st.checkbox("Protein Table", value=True,
+        help="Interactive table with protein names, SHAP values, and UniProt links.")
+    show_stats = st.checkbox("Statistics", value=False,
+        help="Summary statistics for filtered proteins.")
     
     st.markdown("---")
     mark_says("Markverse/Markwithamassspec.png", f"Exploring proteins for {current_sample}")
@@ -65,7 +67,7 @@ st.markdown("---")
 col_search, col_upload = st.columns([2, 1])
 
 with col_search:
-    st.markdown("### 🔍 Search Proteins")
+    st.markdown("### Search Proteins")
     search_query = st.text_input(
         "Search by UniProt ID or protein name",
         placeholder="e.g., P04406 or GAPDH or albumin",
@@ -73,7 +75,7 @@ with col_search:
     )
 
 with col_upload:
-    st.markdown("### 📤 Custom Protein List")
+    st.markdown("### Custom Protein List")
     custom_proteins_input = st.text_area(
         "Paste protein IDs (one per line)",
         placeholder="P04406\nP68871\nP02768",
@@ -85,7 +87,7 @@ with col_upload:
 custom_protein_set = set()
 if custom_proteins_input:
     custom_protein_set = set(line.strip() for line in custom_proteins_input.split('\n') if line.strip())
-    st.caption(f"📋 {len(custom_protein_set)} proteins in custom list")
+    st.caption(f"{len(custom_protein_set)} proteins in custom list")
 
 # --- Tissue & Filter Selection ---
 st.markdown("### Select Filters")
@@ -93,13 +95,16 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     tissues = prediction_summed.index.tolist()
-    selected_tissue = st.selectbox("Tissue", tissues, key="protein_tissue")
+    selected_tissue = st.selectbox("Tissue", tissues, key="protein_tissue",
+        help="Select tissue to view its contributing proteins.")
 
 with col2:
-    abundance_filter = st.selectbox("Abundance", ["All", "Present", "Absent"], key="abundance")
+    abundance_filter = st.selectbox("Abundance", ["All", "Present", "Absent"], key="abundance",
+        help="Filter by protein presence in your sample.")
 
 with col3:
-    shap_filter = st.selectbox("Impact", ["All", "Pro (positive)", "Con (negative)"], key="shap")
+    shap_filter = st.selectbox("Impact", ["All", "Pro (positive)", "Con (negative)"], key="shap",
+        help="Pro: supports tissue prediction. Con: opposes it.")
 
 # --- Get filtered data ---
 shap_data = prediction_df.loc[selected_tissue]

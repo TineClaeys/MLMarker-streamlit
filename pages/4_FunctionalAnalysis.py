@@ -55,9 +55,12 @@ with st.sidebar:
         prediction_summed = result['summed_pred']
     
     st.markdown("### Analysis Options")
-    show_selection = st.checkbox("Protein Selection", value=True)
-    show_results = st.checkbox("Results Table", value=False)
-    show_visual = st.checkbox("Visualization", value=False)
+    show_selection = st.checkbox("Protein Selection", value=True,
+        help="Choose proteins for ORA by tissue, abundance, and impact.")
+    show_results = st.checkbox("Results Table", value=False,
+        help="View enriched terms with p-values and gene counts.")
+    show_visual = st.checkbox("Visualization", value=False,
+        help="Interactive plots of enrichment results.")
     
     st.markdown("---")
     mark_says("Markverse/Markwithamassspec.png", "Let's find what functions your proteins have!")
@@ -78,7 +81,8 @@ if show_selection:
     # Option to use proteins from ProteinExplorer
     if has_explorer_proteins:
         st.info(f"**{len(st.session_state['selected_proteins'])} proteins** transferred from Protein Explorer (Tissue: {explorer_tissue})")
-        use_explorer = st.checkbox("Use proteins from Protein Explorer", value=True, key="use_explorer_proteins")
+        use_explorer = st.checkbox("Use proteins from Protein Explorer", value=True, key="use_explorer_proteins",
+            help="Use filtered proteins from the Protein Explorer page.")
     else:
         use_explorer = False
         st.caption("Tip: Select proteins in **Protein Explorer** first, then come here to run ORA on them.")
@@ -100,7 +104,8 @@ if show_selection:
             selected_tissue = st.selectbox(
                 "Tissue", tissues,
                 index=tissues.index(default_tissue),
-                key="ora_tissue"
+                key="ora_tissue",
+                help="Select tissue to analyze its contributing proteins."
             )
         
         with col2:
@@ -113,7 +118,8 @@ if show_selection:
         with col3:
             shap_filter = st.selectbox(
                 "Impact", ["All", "Pro (positive)", "Con (negative)"],
-                key="ora_shap"
+                key="ora_shap",
+                help="Pro: proteins supporting this tissue. Con: proteins opposing it."
             )
         
         # Get proteins based on filters
@@ -158,7 +164,8 @@ st.markdown("---")
 
 col_run, col_pval = st.columns([2, 1])
 with col_pval:
-    p_threshold = st.selectbox("P-value threshold", [0.001, 0.01, 0.05], index=1, key="pval")
+    p_threshold = st.selectbox("P-value threshold", [0.001, 0.01, 0.05], index=1, key="pval",
+        help="Filter results by significance level.")
 
 with col_run:
     run_button = st.button("Run Over-Representation Analysis", type="primary", width='content')
@@ -176,7 +183,7 @@ if run_button:
             query=selected_proteins,
             sources=['GO:BP', 'GO:MF', 'GO:CC', 'HPA', 'KEGG']
         )
-    
+        filtered = results[results['p_value'] <= p_threshold]
     if results.empty:
         st.warning("No significant enrichment found.")
     else:
@@ -193,9 +200,7 @@ if run_button:
 if 'ora_results' in st.session_state and not st.session_state['ora_results'].empty:
     results = st.session_state['ora_results']
     filtered = results[results['p_value'] <= p_threshold]
-    
-    st.markdown(f"**{len(filtered)} terms** with p-value ≤ {p_threshold}")
-    
+        
     if show_results and len(filtered) > 0:
         st.markdown("---")
         st.markdown("## Results Table")

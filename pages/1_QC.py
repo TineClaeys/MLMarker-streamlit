@@ -30,10 +30,14 @@ technical factors (intensity, coverage) might influence your predictions.
 # --- Sidebar ---
 with st.sidebar:
     st.markdown("### Analysis Options")
-    show_pre_pred = st.checkbox("Pre-Prediction QC", value=True)
-    show_intensity_analysis = st.checkbox("Intensity Analysis", value=False)
-    show_feature_correlation = st.checkbox("Feature Correlation", value=False)
-    show_post_pred = st.checkbox("Post-Prediction QC", value=False)
+    show_pre_pred = st.checkbox("Pre-Prediction QC", value=True,
+        help="Assess feature coverage before prediction. Low coverage (<5%) may indicate need for penalty factor.")
+    show_intensity_analysis = st.checkbox("Intensity Analysis", value=False,
+        help="Compare intensity distributions between MLMarker features and other proteins.")
+    show_feature_correlation = st.checkbox("Feature Correlation", value=False,
+        help="Analyze correlation between coverage and prediction confidence.")
+    show_post_pred = st.checkbox("Post-Prediction QC", value=False,
+        help="Evaluate prediction quality after running MLMarker.")
     st.markdown("---")
     mark_says("Markverse/Markwithamassspec.png", "Let's inspect your data quality!")
 
