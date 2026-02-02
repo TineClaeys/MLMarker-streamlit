@@ -21,12 +21,12 @@ for functional enrichment on the **Functional Analysis** page.
 prediction_df, prediction_summed, current_sample, is_batch = get_sample_data()
 
 if prediction_df is None:
-    mark_says("Markverse/cropped_images/Bald Mark reading a book.png", "No predictions yet! Run MLMarker first.")
+    mark_says("Markverse/mark pointing.png", "No predictions yet! Run MLMarker first.")
     st.warning("No prediction data. Go to **Home** and run MLMarker first.")
     st.stop()
 
 if "df" not in st.session_state:
-    mark_says("Markverse/cropped_images/octopus.png", "No abundance data loaded!")
+    mark_says("Markverse/mark pointing.png", "No abundance data loaded! Upload on the Home page.")
     st.warning("No data found. Please upload data on **Home** page.")
     st.stop()
 
@@ -48,7 +48,7 @@ with st.sidebar:
     show_stats = st.checkbox("Statistics", value=False)
     
     st.markdown("---")
-    mark_says("Markverse/cropped_images/Mark digging for gold.png", f"Exploring proteins for {current_sample}")
+    mark_says("Markverse/mark_binoculars.png", f"Exploring proteins for {current_sample}")
 
 st.markdown(f"**Current Sample:** {current_sample}")
 
@@ -195,4 +195,4 @@ if len(shap_data) > 0:
     st.markdown("---")
     st.info(f"**{len(shap_data)} proteins** selected. Go to **Functional Analysis** to run ORA on these proteins.")
     mark_says("Markverse/cropped_images/Mark knitting.png", 
-              "I'll keep track of your protein selection for the Functional Analysis page!")
+              "I'm keeping track of your protein selection for Functional Analysis!")

@@ -179,7 +179,7 @@ all_possible_tissues = sorted(['Nasal Polyps', 'Duodenum', 'Small intestine', 'P
 
 # --- Sidebar ---
 with st.sidebar:
-    mark_says("Markverse/cropped_images/octopus.png", "Hi! I'm Mark. Let's predict what tissue is in your sample!")
+    mark_says("Markverse/mark pointing.png", "Hi! I'm Mark. Let's predict what tissue is in your sample!")
 
 # --- Header ---
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
@@ -217,7 +217,7 @@ with col1:
     st.markdown("**Format:** Proteins as columns, samples as rows")
     test_button = st.button("Try Example Data")
     if test_button:
-        mark_says("Markverse/cropped_images/octopus.png", "Let me show you around!")
+        mark_says("Markverse/mark_binoculars.png", "Test file loaded! Let me show you around!")
         st.session_state.uploaded_file = "testsample.tsv"
 
 with col2:
@@ -265,7 +265,7 @@ if uploaded_file is not None:
             mark_says("Markverse/cropped_images/Mark on a book.png", "Penalty is OFF. Great for solid tissue samples - I won't tweak missing values.")
 
         if st.button("Run MLMarker"):
-            mark_says("Markverse/cropped_images/Mark knitting.png", "Seeing some cool tissues there? Let me analyze this for you!")
+            mark_says("Markverse/cropped_images/Coding Mark.png", "Running the analysis... let me crunch those numbers!")
 
             model = load_model(st.session_state.penalty, analysis_type)
             sample_df = st.session_state.df.loc[[st.session_state.sample_id]]
@@ -464,7 +464,7 @@ if uploaded_file is not None:
                 st.session_state.batch_coverage = coverage_df[coverage_df['sample_id'].isin(selected_samples.keys())]
                 
                 status_text.text("Done!")
-                mark_says("Markverse/cropped_images/Mark digging for gold.png", f"Processed {len(results)} samples!")
+                mark_says("Markverse/Mark_on_a_rocket.png", f"Processed {len(results)} samples! To the results!")
                 st.success(f"Processed {len(results)} samples!")
             else:
                 st.warning("No samples selected. Please select at least one sample.")

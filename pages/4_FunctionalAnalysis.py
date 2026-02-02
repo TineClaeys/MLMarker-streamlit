@@ -25,7 +25,7 @@ then run ORA to understand their biological functions.
 prediction_df, prediction_summed, current_sample, is_batch = get_sample_data()
 
 if prediction_df is None:
-    mark_says("Markverse/cropped_images/Bald Mark reading a book.png", "No predictions yet! Run MLMarker first.")
+    mark_says("Markverse/mark pointing.png", "No predictions yet! Run MLMarker first.")
     st.warning("No prediction data. Go to **Home** and run MLMarker first.")
     st.stop()
 
@@ -45,7 +45,7 @@ with st.sidebar:
     show_visual = st.checkbox("Visualization", value=False)
     
     st.markdown("---")
-    mark_says("Markverse/cropped_images/Coding Mark.png", "Let's find what functions your proteins have!")
+    mark_says("Markverse/Bald Mark reading about MS.png", "Let's find what functions your proteins have!")
 
 st.markdown(f"**Current Sample:** {current_sample}")
 
@@ -133,8 +133,8 @@ if run_button:
         st.session_state['ora_sample'] = current_sample
         st.session_state['ora_tissue_used'] = selected_tissue
         st.success(f"Found {len(results)} enriched terms!")
-        mark_says("Markverse/cropped_images/Mark digging for gold.png", 
-                  f"Found {len(results)} enriched terms! Check out the biological functions below.")
+        mark_says("Markverse/markgraduation.png", 
+                  f"Found {len(results)} enriched terms! You're learning so much about your proteins!")
 
 # ==============================================================================
 # SECTION: Results

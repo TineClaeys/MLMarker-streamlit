@@ -28,7 +28,7 @@ with st.sidebar:
     show_feature_correlation = st.checkbox("Feature Correlation", value=False)
     show_post_pred = st.checkbox("Post-Prediction QC", value=False)
     st.markdown("---")
-    mark_says("Markverse/cropped_images/octopus.png", "Let's check your data quality!")
+    mark_says("Markverse/mark_binoculars.png", "Let's inspect your data quality!")
 
 # --- Get MLMarker features ---
 @st.cache_data
@@ -40,7 +40,7 @@ mlmarker_features = get_mlmarker_features()
 
 # --- Check data availability ---
 if "df" not in st.session_state or st.session_state.df is None:
-    mark_says("Markverse/cropped_images/Bald Mark reading a book.png", "No data yet! Upload on the Home page first.")
+    mark_says("Markverse/mark pointing.png", "No data yet! Upload on the Home page first.")
     st.warning("No data loaded. Please go to **Home** and upload your data.")
     st.stop()
 
@@ -124,13 +124,13 @@ if show_pre_pred:
         coverage_pct = sample_data['Coverage (%)']
         if coverage_pct < 5:
             st.warning(f"**Low coverage ({coverage_pct:.1f}%)** - Consider enabling the penalty factor.")
-            mark_says("Markverse/cropped_images/Bald Mark reading a book.png", 
+            mark_says("Markverse/mark_in_jail.png", 
                       "Low coverage detected! Enable the penalty factor on the Home page for better results.")
         elif coverage_pct < 20:
             st.info(f"**Moderate coverage ({coverage_pct:.1f}%)** - Predictions should be reliable.")
         else:
             st.success(f"**Good coverage ({coverage_pct:.1f}%)** - Excellent data quality!")
-            mark_says("Markverse/cropped_images/Mark digging for gold.png", 
+            mark_says("Markverse/Mark_on_a_rocket.png", 
                       f"Great coverage at {coverage_pct:.1f}%! Your prediction should be reliable.")
     else:
         # Multiple samples view - show distributions
@@ -170,8 +170,8 @@ if show_pre_pred:
         low_cov = coverage_df[coverage_df['Coverage (%)'] < 5]
         if len(low_cov) > 0:
             st.warning(f"**{len(low_cov)} sample(s)** have <5% coverage. Consider enabling penalty factor for these.")
-            mark_says("Markverse/cropped_images/Bald Mark reading a book.png", 
-                      f"Looks like {len(low_cov)} sample(s) have low coverage. Don't worry - just enable the penalty factor!")
+            mark_says("Markverse/mark_in_jail.png", 
+                      f"Uh oh! {len(low_cov)} sample(s) have low coverage. Enable the penalty factor for those!")
 
 # ==============================================================================
 # SECTION: Intensity Analysis
@@ -315,8 +315,8 @@ if show_feature_correlation:
                         **Strong correlation (r = {r:.2f})**: Intensity variation is a global sample-level effect. 
                         This suggests MLMarker predictions are **not driven by intensity artifacts**.
                         """)
-                        mark_says("Markverse/cropped_images/Mark digging for gold.png", 
-                                  f"Excellent! r = {r:.2f} shows intensity is a global effect, not MLMarker-specific.")
+                        mark_says("Markverse/Mark_on_a_rocket.png", 
+                                  f"r = {r:.2f} - We're flying! Intensity is a global effect, not MLMarker-specific.")
                     elif r > 0.7:
                         st.info(f"""
                         **Good correlation (r = {r:.2f})**: Most intensity variation appears to be global. 
@@ -490,8 +490,8 @@ if show_post_pred:
                         **No significant differences** in technical metrics between predicted groups.
                         This suggests predictions are driven by **biology, not artifacts**.
                         """)
-                        mark_says("Markverse/cropped_images/Mark digging for gold.png", 
-                                  "Great news! Technical metrics don't differ between groups - your predictions look solid!")
+                        mark_says("Markverse/Mark_touching_human_like_davincis.png", 
+                                  "The data speaks! Technical metrics don't differ between groups - biology is driving the predictions!")
                     elif test_results[2]['Significant'] == 'No' and test_results[3]['Significant'] == 'No':
                         st.info("""
                         **Coverage and MLMarker proportion** don't differ significantly between groups.
@@ -549,5 +549,5 @@ st.download_button(
     width='stretch'
 )
 
-mark_says("Markverse/cropped_images/octopus.png", 
-          "QC looks good? Head over to Visualisations to explore your predictions!")
+mark_says("Markverse/markgraduation.png", 
+          "QC complete! Head over to Visualisations to explore your predictions!")

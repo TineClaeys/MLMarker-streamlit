@@ -27,7 +27,7 @@ Each protein contributes positively (**pro**) or negatively (**con**) to each ti
 prediction_df, prediction_summed, current_sample, is_batch = get_sample_data()
 
 if prediction_df is None:
-    mark_says("Markverse/cropped_images/Bald Mark reading a book.png", "No predictions yet! Run MLMarker on the Home page first.")
+    mark_says("Markverse/mark pointing.png", "No predictions yet! Run MLMarker on the Home page first.")
     st.warning("No prediction data. Go to **Home** and run MLMarker first.")
     st.stop()
 
@@ -56,7 +56,7 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    mark_says("Markverse/cropped_images/octopus.png", f"Viewing: {current_sample}")
+    mark_says("Markverse/mark_binoculars.png", f"Viewing: {current_sample}")
 
 st.markdown(f"**Current Sample:** {current_sample}")
 
@@ -160,7 +160,7 @@ if show_overview:
         for tissue, prob in top_5.items():
             st.markdown(f"**{tissue}**: {prob:.1%}")
         
-        mark_says("Markverse/cropped_images/Mark on a book.png", 
+        mark_says("Markverse/Mark_on_a_rocket.png", 
                   f"Your top prediction is {top_5.index[0]} at {top_5.iloc[0]:.1%}!")
 
 # ==============================================================================
@@ -203,7 +203,7 @@ if show_tissue_detail:
                 st.markdown(f"- {item}")
         
         mark_says("Markverse/cropped_images/Mark digging for gold.png", 
-                  f"Found {len(pro_proteins)} supporting and {len(con_proteins)} opposing proteins!")
+                  f"Found gold! {len(pro_proteins)} supporting and {len(con_proteins)} opposing proteins!")
 
 # ==============================================================================
 # SECTION: Protein Comparison
@@ -226,7 +226,7 @@ if show_scatter:
         if st.button("Compare Tissues", key="btn_scatter"):
             fig = scatterplot_tissues(prediction_df, tissue_a, tissue_b)
             st.plotly_chart(fig, width='stretch')
-            mark_says("Markverse/cropped_images/Coding Mark.png", 
+            mark_says("Markverse/Mark_touching_human_like_davincis.png", 
                       "Proteins in opposite quadrants have tissue-specific roles!")
     else:
         st.info("Select two different tissues to compare.")

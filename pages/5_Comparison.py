@@ -25,7 +25,7 @@ Compare MLMarker predictions across **multiple samples**. This page provides:
 
 # Check if batch results are available
 if "batch_results" not in st.session_state or not st.session_state.batch_results:
-    mark_says("Markverse/cropped_images/Bald Mark reading a book.png", 
+    mark_says("Markverse/mark pointing.png", 
               "No batch results yet! Go to Home and run MLMarker on multiple samples first.")
     st.warning("""
     **No batch results available.**
@@ -65,8 +65,8 @@ with st.sidebar:
     show_downloads = st.checkbox("Download Results", value=False)
     
     st.markdown("---")
-    mark_says("Markverse/cropped_images/Mark digging for gold.png", 
-              f"Analyzing {len(sample_ids)} samples!")
+    mark_says("Markverse/mark_binoculars.png", 
+              f"Comparing {len(sample_ids)} samples! Let's see what we find!")
 
 # ==============================================================================
 # SECTION: Overview Heatmap
@@ -281,8 +281,8 @@ if show_pca:
             # Info about the analysis
             st.info(f"**{pca_title}**: {len(pca_matrix.columns):,} features used for clustering {len(pca_matrix)} samples.")
             
-            mark_says("Markverse/cropped_images/Coding Mark.png", 
-                      "Samples close together have similar profiles!")
+            mark_says("Markverse/Mark_touching_human_like_davincis.png", 
+                      "Samples close together have similar profiles! Look at those patterns!")
     elif pca_matrix is not None:
         st.info("Need at least 3 samples for PCA clustering.")
 
@@ -445,7 +445,7 @@ if show_sample_comparison:
             fig_diff.update_layout(height=400, margin=dict(l=10, r=10, t=40, b=10))
             st.plotly_chart(fig_diff, width='stretch')
         
-        mark_says("Markverse/cropped_images/Mark knitting.png", 
+        mark_says("Markverse/cropped_images/Coding Mark.png", 
                   "Positive differences mean sample A has higher probability for that tissue!")
     else:
         st.info("Select two different samples to compare.")
@@ -610,5 +610,5 @@ if show_downloads:
                 width='stretch'
             )
 
-mark_says("Markverse/cropped_images/octopus.png", 
+mark_says("Markverse/markgraduation.png", 
           "Thanks for using MLMarker! Don't forget to cite us in your publications.")
