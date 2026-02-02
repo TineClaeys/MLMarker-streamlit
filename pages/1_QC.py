@@ -45,7 +45,21 @@ if "df" not in st.session_state or st.session_state.df is None:
     st.stop()
 
 df = st.session_state.df
-sample_ids = df.index.tolist()
+
+# --- Determine which samples to analyze ---
+# Check if we're in batch mode or single sample mode
+if "batch_results" in st.session_state and st.session_state.batch_results:
+    # Batch mode: use only samples that were predicted
+    sample_ids = list(st.session_state.batch_results.keys())
+elif "sel_sample" in st.session_state and st.session_state.sel_sample:
+    # Single sample mode: use only the selected sample
+    sample_ids = [st.session_state.sel_sample]
+elif "sample_id" in st.session_state and st.session_state.sample_id:
+    # Single sample mode (alternative key): use only the selected sample
+    sample_ids = [st.session_state.sample_id]
+else:
+    # No predictions yet - show all samples for pre-prediction QC
+    sample_ids = df.index.tolist()
 
 # --- Calculate comprehensive QC metrics for all samples ---
 coverage_data = []
